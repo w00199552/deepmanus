@@ -1,4 +1,4 @@
-import {useState, useCallback} from "react";
+import {useState, useCallback, useEffect} from "react";
 import {
     ChevronRight,
     File,
@@ -48,6 +48,15 @@ export function Tree({
         return dirs;
     });
     const [checkedPaths, setCheckedPaths] = useState(new Set());
+
+    // Reset expanded set when data changes (e.g. switching skills).
+    useEffect(() => {
+        if (!data) return;
+        const dirs = new Set();
+        if (defaultExpandAll) collectDirs(data, dirs);
+        setExpandedPaths(dirs);
+        setCheckedPaths(new Set());
+    }, [data]);
 
     const handleToggle = useCallback(
         (node, willOpen) => {
