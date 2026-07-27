@@ -42,11 +42,7 @@ export default defineConfig({
         target: 'http://127.0.0.1:8999',
         changeOrigin: true,
       },
-      '/files': {
-        target: 'http://127.0.0.1:8999',
-        changeOrigin: true,
-      },
-      '/workdir': {
+      '/sandbox': {
         target: 'http://127.0.0.1:8999',
         changeOrigin: true,
       },

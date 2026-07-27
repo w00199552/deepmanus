@@ -84,44 +84,44 @@ export class SandboxStore {
 
     // ─── file operations ─────────────────────────────────────────────────────
 
-    /** GET /files/tree — root + first-level children (collapsed dirs). */
+    /** GET /sandbox/tree — root + first-level children (collapsed dirs). */
     async loadTree() {
         const wdParam = this.workdir
             ? `?workdir=${encodeURIComponent(this.workdir)}`
             : "";
-        const res = await fetch(`${BACKEND}/files/tree${wdParam}`);
+        const res = await fetch(`${BACKEND}/sandbox/tree${wdParam}`);
         if (!res.ok) throw new Error(`tree failed: ${res.status}`);
         return res.json();
     }
 
-    /** GET /files/children — immediate children of a dir (lazy expansion). */
+    /** GET /sandbox/children — immediate children of a dir (lazy expansion). */
     async loadChildren(dirPath) {
         const wdParam = this.workdir
             ? `&workdir=${encodeURIComponent(this.workdir)}`
             : "";
         const res = await fetch(
-            `${BACKEND}/files/children?path=${encodeURIComponent(dirPath)}${wdParam}`
+            `${BACKEND}/sandbox/children?path=${encodeURIComponent(dirPath)}${wdParam}`
         );
         if (!res.ok) throw new Error(`children failed: ${res.status}`);
         const data = await res.json();
         return data.children;
     }
 
-    /** GET /files/read — read a file's content. */
+    /** GET /sandbox/read — read a file's content. */
     async loadFile(path) {
         const wdParam = this.workdir
             ? `&workdir=${encodeURIComponent(this.workdir)}`
             : "";
         const res = await fetch(
-            `${BACKEND}/files/read?path=${encodeURIComponent(path)}${wdParam}`
+            `${BACKEND}/sandbox/read?path=${encodeURIComponent(path)}${wdParam}`
         );
         if (!res.ok) throw new Error(`read failed: ${res.status}`);
         return res.json();
     }
 
-    /** PUT /files/write — save a file. */
+    /** PUT /sandbox/write — save a file. */
     async saveFile(path, content) {
-        const res = await fetch(`${BACKEND}/files/write`, {
+        const res = await fetch(`${BACKEND}/sandbox/write`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -134,9 +134,9 @@ export class SandboxStore {
         return res.json();
     }
 
-    /** DELETE /files/delete — delete a file or directory. */
+    /** DELETE /sandbox/delete — delete a file or directory. */
     async deletePath(path) {
-        const res = await fetch(`${BACKEND}/files/delete`, {
+        const res = await fetch(`${BACKEND}/sandbox/delete`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ path, workdir: this.workdir || undefined }),
@@ -148,9 +148,9 @@ export class SandboxStore {
         return res.json();
     }
 
-    /** POST /files/mkdir — create a directory. */
+    /** POST /sandbox/mkdir — create a directory. */
     async createDir(path) {
-        const res = await fetch(`${BACKEND}/files/mkdir`, {
+        const res = await fetch(`${BACKEND}/sandbox/mkdir`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ path, workdir: this.workdir || undefined }),
@@ -162,9 +162,9 @@ export class SandboxStore {
         return res.json();
     }
 
-    /** POST /files/create — create an empty file. */
+    /** POST /sandbox/create — create an empty file. */
     async createFile(path) {
-        const res = await fetch(`${BACKEND}/files/create`, {
+        const res = await fetch(`${BACKEND}/sandbox/create`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ path, workdir: this.workdir || undefined }),
@@ -181,6 +181,6 @@ export class SandboxStore {
         const wdParam = this.workdir
             ? `?workdir=${encodeURIComponent(this.workdir)}`
             : "";
-        return `${BACKEND}/files/watch${wdParam}`;
+        return `${BACKEND}/sandbox/watch${wdParam}`;
     }
 }

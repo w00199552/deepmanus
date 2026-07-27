@@ -1,10 +1,14 @@
-"""Files API — browse + read + write files in the workdir.
+"""Sandbox API — browse + read + write files in the topic's workdir.
 
 Endpoints:
-  GET    /files/tree              — recursive file tree of workdir
-  GET    /files/read?path=        — read a file
-  PUT    /files/write             — write/save a file
-  GET    /files/watch             — SSE stream of file change events (watchdog)
+  GET    /sandbox/tree              — file tree of workdir (first level)
+  GET    /sandbox/children?path=    — lazy-load children of a directory
+  GET    /sandbox/read?path=        — read a file
+  PUT    /sandbox/write             — write/save a file
+  DELETE /sandbox/delete            — delete a file or directory
+  POST   /sandbox/mkdir             — create a directory
+  POST   /sandbox/create            — create an empty file
+  GET    /sandbox/watch             — SSE stream of file change events (watchdog)
 """
 
 from __future__ import annotations
@@ -22,11 +26,11 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(prefix="/sandbox", tags=["sandbox"])
 
 
 def _workdir(workdir: str | None = None) -> Path:
-    """Resolve the workdir to use. If ``workdir`` is given (per-session),
+    """Resolve the workdir to use. If ``workdir`` is given (per-topic),
     use it; otherwise fall back to the global setting."""
     base = workdir or settings.workdir
     return Path(base).resolve()
@@ -99,9 +103,9 @@ def _list_children(path: Path, relative: str, workdir: str | None = None) -> lis
 async def get_tree(workdir: str | None = Query(None)) -> FileNode:
     """Workdir root with first-level children (depth=1).
 
-    Pass ``?workdir=`` to target a specific session's workdir (per-session
+    Pass ``?workdir=`` to target a specific topic's workdir (per-topic
     sandbox). Subdirectories are collapsed; their children are lazy-loaded via
-    ``GET /files/children``.
+    ``GET /sandbox/children``.
     """
     wd = _workdir(workdir)
     root = _build_node(wd, "", workdir)
@@ -212,7 +216,7 @@ class _FileWatcher:
     """Single-directory watchdog.
 
     Only the **currently active** workdir is watched — matching the one
-    session the user is looking at.  When the frontend switches session it
+    topic the user is looking at. When the frontend switches topic it
     closes the SSE connection (``useEffect`` cleanup) and opens a new one
     with a different ``?workdir=``, which triggers ``set_target`` to
     re-point the observer.
@@ -281,7 +285,7 @@ class _FileWatcher:
     def start(self, wd_str: str, loop: asyncio.AbstractEventLoop) -> asyncio.Queue:
         """Begin watching *wd_str*. Returns the SSE queue for this subscriber.
 
-        Only one subscriber (the active session) is supported at a time.
+        Only one subscriber (the active topic) is supported at a time.
         If called with the same workdir (e.g. React reconnect), the queue is
         replaced without re-scheduling the observer.  If the workdir changed,
         the observer is re-pointed.
@@ -346,7 +350,7 @@ async def watch_files(
     """SSE stream of file change events (created/modified/deleted/moved).
 
     Watches only the active workdir (``?workdir=``).  The frontend opens a
-    fresh connection when the user switches session, which re-points the
+    fresh connection when the user switches topic, which re-points the
     observer to the new workdir.
     """
     wd_str = workdir or settings.workdir
