@@ -20,12 +20,12 @@ import {
     Trash2,
 } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
-import {Highlight, themes} from "prism-react-renderer";
 import {Group, Panel, Separator} from "react-resizable-panels";
 
 import {useStore} from "@/hooks/use-store.jsx";
 import {useTheme} from "@/hooks/use-theme.js";
 import {cn, copyText, joinAbsPath} from "@/lib/utils.js";
+import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 import {ConfirmDialog} from "@/components/sandbox/confirm-dialog.jsx";
 import {usePlaygroundToolbar} from "@/components/playground/playground-context.js";
 import {Popover, PopoverContent, PopoverTrigger,} from "@/components/ui/popover.jsx";
@@ -813,58 +813,14 @@ function FileEditor({file, draft, setDraft}) {
     }
 
     if (file.file_type === "code") {
-        const ext = file.name.split(".").pop()?.toLowerCase() || "text";
-        const langMap = {
-            py: "python",
-            js: "javascript",
-            jsx: "jsx",
-            ts: "typescript",
-            tsx: "tsx",
-            sh: "bash",
-            json: "json",
-            yaml: "yaml",
-            yml: "yaml",
-            css: "css",
-            html: "markup",
-            sql: "sql",
-        };
-        const lang = langMap[ext] || "text";
         return (
-            <Highlight theme={isDark ? themes.vsDark : themes.vsLight} code={draft} language={lang}>
-                {({
-                      className,
-                      style,
-                      tokens,
-                      getLineProps,
-                      getTokenProps,
-                  }) => (
-                    <pre
-                        className={cn(
-                            className,
-                            "m-0 p-4 text-[13px] leading-relaxed"
-                        )}
-                        style={{...style, background: "transparent"}}
-                    >
-                        {tokens.map((line, i) => {
-                            const lineProps = getLineProps({line});
-                            return (
-                                <div key={i} {...lineProps}>
-                                    <span
-                                        className="mr-3 inline-block w-8 select-none text-right text-muted-foreground/30">
-                                        {i + 1}
-                                    </span>
-                                    {line.map((token, key) => (
-                                        <span
-                                            key={key}
-                                            {...getTokenProps({token})}
-                                        />
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </pre>
-                )}
-            </Highlight>
+            <CodeEditor
+                value={draft}
+                language={langFromName(file.name)}
+                theme={isDark ? "dark" : "light"}
+                onChange={setDraft}
+                path={file.name}
+            />
         );
     }
 

@@ -5,12 +5,11 @@ import {
     Sparkles,
 } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
-import {Highlight, themes} from "prism-react-renderer";
 
 import {useTheme} from "@/hooks/use-theme.js";
 import {getSkillFile, getSkillTree} from "@/services/agent-service.js";
 import {Tree} from "@/components/ui/tree.jsx";
-import {cn} from "@/lib/utils.js";
+import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 
 const SkillDetail = ({name, onBack}) => {
     const {isDark} = useTheme();
@@ -127,42 +126,14 @@ function FileContent({file}) {
     }
 
     if (file.file_type === "code") {
-        const ext = file.name.split(".").pop()?.toLowerCase() || "text";
-        const langMap = {
-            py: "python", js: "javascript", jsx: "jsx", ts: "typescript",
-            tsx: "tsx", sh: "bash", json: "json", yaml: "yaml", yml: "yaml",
-            css: "css", html: "markup", sql: "sql",
-        };
-        const lang = langMap[ext] || "text";
-
         return (
-            <Highlight
-                theme={isDark ? themes.vsDark : themes.vsLight}
-                code={file.content}
-                language={lang}
-            >
-                {({className, style, tokens, getLineProps, getTokenProps}) => (
-                    <pre
-                        className={cn(className, "m-0 p-4 text-[13px] leading-relaxed")}
-                        style={{...style, background: "transparent"}}
-                    >
-                        {tokens.map((line, i) => {
-                            const lineProps = getLineProps({line});
-                            return (
-                                <div key={i} {...lineProps}>
-                                    <span
-                                        className="mr-3 inline-block w-8 select-none text-right text-muted-foreground/30">
-                                        {i + 1}
-                                    </span>
-                                    {line.map((token, key) => (
-                                        <span key={key} {...getTokenProps({token})} />
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </pre>
-                )}
-            </Highlight>
+            <CodeEditor
+                value={file.content}
+                language={langFromName(file.name)}
+                theme={isDark ? "dark" : "light"}
+                readOnly
+                path={file.name}
+            />
         );
     }
 
