@@ -295,7 +295,6 @@ export class AgentRuntime {
         runInAction(() => {
             this.runningBySession[topicId] = false;
         });
-        // Attribute activity to the topic the user is currently looking at.
         const activeTopicId = this._topicStore?.activeTopicId;
         if (activeTopicId) {
             const preview = this._lastAssistantText(topicId);
@@ -307,10 +306,10 @@ export class AgentRuntime {
             });
             this._topicStore.markStatus?.(activeTopicId, "active");
         }
-        // When the main topic's turn ends, the agent may have dispatched a new
-        // sub-agent / team (via the dispatch tool). Refresh the topic list so the
-        // new child appears without a manual page reload, then auto-switch to it
-        // so the user lands on the delegated work.
+        // Reload topic list on EVERY turn end — agents may have been dispatched
+        // mid-run (TeamLeader → Researcher/Coder), updating the agents array
+        // and avatars. For main topic, also auto-switch to new topics.
+        this._topicStore?.load?.().catch(() => {});
         if (topicId === "manus" || topicId === "main") {
             this._afterDelegation().catch(() => {});
         }
