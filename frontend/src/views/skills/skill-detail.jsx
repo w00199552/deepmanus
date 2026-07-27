@@ -70,13 +70,11 @@ const SkillDetail = ({name, onBack}) => {
                     </div>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-                    {treeData && (
-                        <Tree
-                            data={treeData}
-                            selectedPath={file?.path}
-                            onSelect={(node) => loadFile(node.path)}
-                        />
-                    )}
+                    <Tree
+                        data={treeData}
+                        selectedPath={file?.path}
+                        onSelect={(node) => loadFile(node.path)}
+                    />
                 </div>
             </div>
 

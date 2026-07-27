@@ -81,6 +81,8 @@ export function Tree({
         [onCheck]
     );
 
+    if (!data) return null;
+
     // Root renders its children directly (no indent for the root container).
     if (data.type === "dir" && data.children) {
         return (
