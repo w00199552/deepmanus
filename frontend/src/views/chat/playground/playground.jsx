@@ -23,12 +23,12 @@ import MDEditor from "@uiw/react-md-editor";
 import {Highlight, themes} from "prism-react-renderer";
 import {Group, Panel, Separator} from "react-resizable-panels";
 
-import {useStore} from "@/hooks/use-store";
-import {useTheme} from "@/hooks/use-theme";
-import {cn, copyText, joinAbsPath} from "@/lib/utils";
-import {ConfirmDialog} from "@/components/sandbox/confirm-dialog";
-import {usePlaygroundToolbar} from "@/components/playground/playground-context";
-import {Popover, PopoverContent, PopoverTrigger,} from "@/components/ui/popover";
+import {useStore} from "@/hooks/use-store.jsx";
+import {useTheme} from "@/hooks/use-theme.js";
+import {cn, copyText, joinAbsPath} from "@/lib/utils.js";
+import {ConfirmDialog} from "@/components/sandbox/confirm-dialog.jsx";
+import {usePlaygroundToolbar} from "@/components/playground/playground-context.js";
+import {Popover, PopoverContent, PopoverTrigger,} from "@/components/ui/popover.jsx";
 
 /**
  * SandboxTool — file tree + content editor for the Sandbox, hosted inside

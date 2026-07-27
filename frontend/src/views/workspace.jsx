@@ -2,12 +2,12 @@ import {observer} from "mobx-react-lite";
 import {useEffect, useState} from "react";
 import {Group, Panel, Separator} from "react-resizable-panels";
 import {TopNav} from "@/components/top-nav";
-import {TopicList} from "@/views/topic-list";
-import {ChatPane} from "@/views/chat-pane";
+import {TopicList} from "@/views/chat/topic/topic-list.jsx";
+import {ChatPane} from "@/views/chat/topic/chat-pane.jsx";
 import {PlaygroundShell} from "@/components/playground/playground-shell";
-import {AgentsView} from "@/views/agents-view";
-import {SkillsView} from "@/views/skills-view";
-import {ToolsView} from "@/views/tools-view";
+import {AgentsView} from "@/views/agents/agents-view.jsx";
+import SkillsView from "@/views/skills/skills-view.jsx";
+import {ToolsView} from "@/views/tools/tools-view.jsx";
 
 // localStorage keys for persisted panel layouts (survive session switches).
 const LAYOUT_LEFT = "openmanus.layout.left"; // list | chat  (inside left half)
@@ -68,26 +68,26 @@ export const Workspace = observer(function Workspace() {
 
     return (
         <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
-            <TopNav activeView={activeView} onNavigate={setActiveView} />
+            <TopNav activeView={activeView} onNavigate={setActiveView}/>
 
             {/* Agents view: full-width, no panels */}
             {activeView === "agents" && (
                 <div className="min-h-0 flex-1">
-                    <AgentsView />
+                    <AgentsView/>
                 </div>
             )}
 
             {/* Skills view: full-width, no panels */}
             {activeView === "skills" && (
                 <div className="min-h-0 flex-1">
-                    <SkillsView />
+                    <SkillsView/>
                 </div>
             )}
 
             {/* Tools view: full-width, no panels */}
             {activeView === "tools" && (
                 <div className="min-h-0 flex-1">
-                    <ToolsView />
+                    <ToolsView/>
                 </div>
             )}
 
@@ -96,7 +96,7 @@ export const Workspace = observer(function Workspace() {
                 <Group
                     orientation="horizontal"
                     className="flex min-h-0 flex-1"
-                    style={{ flexDirection: "row" }}
+                    style={{flexDirection: "row"}}
                     defaultLayout={mainLayout}
                     onLayoutChanged={(l) => setMainLayout(l)}
                 >
@@ -105,29 +105,31 @@ export const Workspace = observer(function Workspace() {
                         <Group
                             orientation="horizontal"
                             className="flex h-full"
-                            style={{ flexDirection: "row" }}
+                            style={{flexDirection: "row"}}
                             defaultLayout={leftLayout}
                             onLayoutChanged={(l) => setLeftLayout(l)}
                         >
                             <Panel id="list" minSize="10%" maxSize="45%">
-                                <TopicList />
+                                <TopicList/>
                             </Panel>
                             <Separator className="sep-bar relative w-1.5 cursor-col-resize">
-                                <span className="sep-line pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
+                                <span
+                                    className="sep-line pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2"/>
                             </Separator>
                             <Panel id="chat" minSize="30%">
-                                <ChatPane />
+                                <ChatPane/>
                             </Panel>
                         </Group>
                     </Panel>
 
                     <Separator className="sep-bar relative w-1.5 cursor-col-resize">
-                        <span className="sep-line pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
+                        <span
+                            className="sep-line pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2"/>
                     </Separator>
 
                     {/* ── RIGHT HALF: playground shell (Sandbox / Preview / Terminal) */}
                     <Panel id="right" defaultSize="50%" minSize="30%">
-                        <PlaygroundShell />
+                        <PlaygroundShell/>
                     </Panel>
                 </Group>
             )}

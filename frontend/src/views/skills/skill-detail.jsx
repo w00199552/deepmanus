@@ -18,7 +18,7 @@ import {useTheme} from "@/hooks/use-theme.js";
 import {getSkillFile, getSkillTree} from "@/services/agent-service.js";
 import {cn} from "@/lib/utils.js";
 
-export function SkillDetail({name, onBack}) {
+const SkillDetail = ({name, onBack}) => {
     const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
     const [tree, setTree] = useState(null);
@@ -128,6 +128,8 @@ export function SkillDetail({name, onBack}) {
         </div>
     );
 }
+
+export default SkillDetail;
 
 // ─── Tree node (recursive) ──────────────────────────────────────────────────
 

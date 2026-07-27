@@ -16,8 +16,8 @@ import {
 import MDEditor from "@uiw/react-md-editor";
 import {Highlight, themes} from "prism-react-renderer";
 
-import {cn} from "@/lib/utils";
-import {useTheme} from "@/hooks/use-theme";
+import {cn} from "@/lib/utils.js";
+import {useTheme} from "@/hooks/use-theme.js";
 
 const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
 

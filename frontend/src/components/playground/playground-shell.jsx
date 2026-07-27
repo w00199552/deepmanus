@@ -2,7 +2,7 @@ import {useRef, useState} from "react";
 import {FolderTree, Globe, TerminalSquare} from "lucide-react";
 
 import {cn} from "@/lib/utils";
-import {SandboxTool} from "@/views/playground";
+import {SandboxTool} from "@/views/chat/playground/playground.jsx";
 import {PreviewTool} from "@/components/playground/preview-tool";
 import {TerminalTool} from "@/components/playground/terminal-tool";
 import {PlaygroundContext,} from "@/components/playground/playground-context";

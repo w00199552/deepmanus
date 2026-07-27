@@ -2,11 +2,11 @@ import {observer} from "mobx-react-lite";
 import {useEffect} from "react";
 import {PanelRightClose} from "lucide-react";
 
-import {useStore} from "@/hooks/use-store";
-import {resetTopic} from "@/services/topic-service";
-import {ThreadView} from "@/components/chat/thread-view";
-import {ChatInput} from "@/components/chat/chat-input";
-import {TooltipProvider} from "@/components/ui/tooltip";
+import {useStore} from "@/hooks/use-store.jsx";
+import {resetTopic} from "@/services/topic-service.js";
+import {ThreadView} from "@/components/chat/thread-view.jsx";
+import {ChatInput} from "@/components/chat/chat-input.jsx";
+import {TooltipProvider} from "@/components/ui/tooltip.jsx";
 
 /**
  * ChatPane — the middle column, driven by the multi-agent runtime.

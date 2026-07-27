@@ -36,11 +36,11 @@ import {cn} from "@/lib/utils";
  * @param {string} [className]        extra classes on the <button>
  */
 export function FancyButton({
-    children,
-    variant = "accent",
-    className,
-    ...props
-}) {
+                                children,
+                                variant = "accent",
+                                className,
+                                ...props
+                            }) {
     const isAccent = variant === "accent";
     const rippleBg = isAccent ? "bg-accent" : "bg-foreground";
     // Text on the filled slab needs to read against the bright fill.
@@ -74,7 +74,8 @@ export function FancyButton({
             {/* Text mask — the rolling label lives here. */}
             <span className="relative block overflow-hidden">
                 {/* Layer A: default label, sits in place, slides up on hover */}
-                <span className="block translate-y-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-[120%]">
+                <span
+                    className="block translate-y-0 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-[120%]">
                     {children}
                 </span>
                 {/* Layer B: contrast label, hidden below, rolls in on hover.

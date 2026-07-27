@@ -3,11 +3,11 @@ import {useEffect, useState} from "react";
 import {AlertCircle, Bot, Check, ChevronLeft, FileText, Lock, Save, Sparkles, Wrench,} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 
-import {useStore} from "@/hooks/use-store";
-import {useTheme} from "@/hooks/use-theme";
-import {Avatar} from "@/components/avatar";
-import {FancyButton} from "@/components/ui/fancy-button";
-import {cn} from "@/lib/utils";
+import {useStore} from "@/hooks/use-store.jsx";
+import {useTheme} from "@/hooks/use-theme.js";
+import {Avatar} from "@/components/avatar.jsx";
+import {FancyButton} from "@/components/ui/fancy-button.jsx";
+import {cn} from "@/lib/utils.js";
 
 /**
  * AgentsView — card grid → click to open config (left tabs: Prompt / Tools).
