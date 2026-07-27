@@ -191,6 +191,11 @@ async def fan_in(
         members = await session_store.list_in_topic(topic_id)
         known.update(s["id"] for s in members)
 
+        if not known:
+            # No sessions yet — wait for one to be created instead of busy-looping.
+            await asyncio.sleep(1)
+            continue
+
         # Drain one round of frames from all known sessions.
         tasks: dict[asyncio.Task, str] = {}
         for sid in known:
