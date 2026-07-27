@@ -170,7 +170,8 @@ export function SessionAvatar({ session, size = 36 }) {
     }
     // Seed by agent name (stable identity): same agent = same face everywhere
     // (topicList, message stream, agents page). Accept both `name` (session)
-    // and `agent_name` (topic) since the frontend mixes both object shapes.
-    const seed = session.name || session.agent_name || session.id || "unknown";
+    // Seed by agent name (stable identity): same agent = same face everywhere.
+    // Accept `name` (session), `agents[0]` (topic object), or fallback to id.
+    const seed = session.name || (session.agents && session.agents[0]) || session.id || "unknown";
     return <Avatar seed={seed} size={size} />;
 }

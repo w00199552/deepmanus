@@ -322,15 +322,15 @@ function speakerSeed(speaker, session) {
     if (session.kind === "team") return speaker || "team";
     // Strip "agent:" prefix if present (speaker format from SSE events).
     if (speaker && speaker.startsWith("agent:")) return speaker.slice(6);
-    // Accept both `name` (session object) and `agent_name` (topic object).
-    return session.name || session.agent_name || speaker || session.id;
+    // Accept `name` (session), `agents[0]` (topic), or speaker fallback.
+    return session.name || (session.agents && session.agents[0]) || speaker || session.id;
 }
 
 /** Display label for the speaker. */
 function speakerLabel(speaker, session) {
     if (speaker && speaker.startsWith("agent:")) return speaker.slice(6);
-    // Accept both `name` (session) and `agent_name` (topic object).
-    if (session?.kind === "subagent") return session.name || session.agent_name || "agent";
+    // Accept `name` (session) or `agents[0]` (topic).
+    if (session?.kind === "subagent") return session.name || (session.agents && session.agents[0]) || "agent";
     if (session?.kind === "team") return speaker || "team";
-    return speaker || session?.agent_name || session?.name || "Manus";
+    return speaker || session?.name || (session?.agents && session.agents[0]) || "Manus";
 }

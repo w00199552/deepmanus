@@ -48,7 +48,7 @@ export const TopicList = observer(function TopicList({
                         key={t.id}
                         onClick={() => topics.select(t.id)}
                         className="relative shrink-0 rounded-lg p-1 transition hover:bg-sidebar/40"
-                        title={t.title || t.agent_name || t.id.slice(0, 12)}
+                        title={t.title || t.id.slice(0, 12)}
                     >
                         <TopicAvatar agents={t.agents} size={32} />
                         {t.id === topics.activeTopicId && (
@@ -213,7 +213,7 @@ function TopicItem({ topic, unread, active, onSelect, onDelete, canDelete = true
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                         <span className="flex-1 truncate text-[13px] font-medium text-foreground">
-                            {topic.title || topic.agent_name || topic.id.slice(0, 12)}
+                            {topic.title || topic.id.slice(0, 12)}
                         </span>
                         <span className="shrink-0 text-[11px] text-muted-foreground/60">
                             {formatListTime(topic.updated_at || topic.created_at)}

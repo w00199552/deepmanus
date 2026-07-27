@@ -53,7 +53,7 @@ export const ChatPane = observer(function ChatPane({ onToggleCollapse }) {
                     <span className="truncate text-[13px] font-medium">
                         {active
                             ? active.kind === "subagent"
-                                ? active.agent_name || "agent"
+                                ? (active.agents && active.agents[0]) || "agent"
                                 : active.kind === "team"
                                   ? "Team"
                                   : active.title || (active.id || "").slice(0, 12)

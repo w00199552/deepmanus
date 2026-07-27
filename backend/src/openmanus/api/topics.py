@@ -71,7 +71,6 @@ class TopicSummary(BaseModel):
     created_at: str | None = None
     updated_at: str | None = None
     session_id: str | None = None
-    agent_name: str | None = None
     kind: str = "root"
     status: str = "active"
     preview: str | None = None
@@ -103,7 +102,6 @@ async def list_topics() -> list[dict]:
             "created_at": t.get("created_at"),
             "updated_at": t.get("updated_at"),
             "session_id": (latest or {}).get("id"),
-            "agent_name": (latest or {}).get("name"),
             "kind": (latest or {}).get("kind", "root"),
             "status": (latest or {}).get("status", "active"),
             "preview": preview,

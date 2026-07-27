@@ -408,7 +408,7 @@ export class AgentRuntime {
  * before vs after reload and grab any new derived topic. Picks the most
  * recently updated one if several appeared.
  *
- * Each item is a topic object: { id, title, agent_name, kind, status, preview,
+ * Each item is a topic object: { id, title, agents, kind, status, preview,
  * session_id, workdir, created_at, updated_at }.
  */
 function _newestDerived(list, beforeIds) {
