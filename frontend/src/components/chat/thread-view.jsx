@@ -1,16 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import { observer } from "mobx-react-lite";
-import {
-    Brain,
-    ChevronDown,
-    ChevronRight,
-    Loader2,
-    Sparkles,
-    Wrench,
-} from "lucide-react";
+import {useEffect, useRef, useState} from "react";
+import {observer} from "mobx-react-lite";
+import {Brain, ChevronDown, ChevronRight, Loader2, Sparkles, Wrench,} from "lucide-react";
 
-import { Avatar } from "@/components/avatar";
-import { MarkdownText } from "@/components/chat/markdown-text";
+import {Avatar} from "@/components/avatar";
+import {MarkdownText} from "@/components/chat/markdown-text";
 
 /**
  * ThreadView — a PURE presentational chat surface (no assistant-ui runtime).

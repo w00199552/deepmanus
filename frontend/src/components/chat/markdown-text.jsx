@@ -1,11 +1,11 @@
-import { useState } from "react";
+import {useState} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Highlight, themes } from "prism-react-renderer";
-import { Check, ClipboardCopy } from "lucide-react";
+import {Highlight, themes} from "prism-react-renderer";
+import {Check, ClipboardCopy} from "lucide-react";
 
-import { cn, copyText } from "@/lib/utils";
-import { useTheme } from "@/hooks/use-theme";
+import {cn, copyText} from "@/lib/utils";
+import {useTheme} from "@/hooks/use-theme";
 
 /**
  * MarkdownText — renders assistant message content as GitHub-flavored markdown.

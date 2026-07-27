@@ -1,13 +1,11 @@
-import { useRef, useState } from "react";
-import { FolderTree, Globe, TerminalSquare } from "lucide-react";
+import {useRef, useState} from "react";
+import {FolderTree, Globe, TerminalSquare} from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { SandboxTool } from "@/views/playground";
-import { PreviewTool } from "@/components/playground/preview-tool";
-import { TerminalTool } from "@/components/playground/terminal-tool";
-import {
-    PlaygroundContext,
-} from "@/components/playground/playground-context";
+import {cn} from "@/lib/utils";
+import {SandboxTool} from "@/views/playground";
+import {PreviewTool} from "@/components/playground/preview-tool";
+import {TerminalTool} from "@/components/playground/terminal-tool";
+import {PlaygroundContext,} from "@/components/playground/playground-context";
 
 /**
  * PlaygroundShell — the right-rail container that hosts multiple "tools".

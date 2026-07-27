@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import {cn} from "@/lib/utils";
 
 /**
  * FancyButton — a CTA button with the devrajchatribin.com "fill up" hover.

@@ -1,4 +1,4 @@
-import { Globe, Lock } from "lucide-react";
+import {Globe, Lock} from "lucide-react";
 
 /**
  * PreviewTool — placeholder for a future web-preview surface.

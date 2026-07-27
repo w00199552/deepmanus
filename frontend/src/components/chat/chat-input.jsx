@@ -1,22 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import {
-    Send,
-    Plus,
-    Paperclip,
-    Cpu,
-    Square,
-    AtSign,
-    Sparkles,
-    Check,
-} from "lucide-react";
+import {useEffect, useRef, useState} from "react";
+import {AtSign, Check, Cpu, Paperclip, Plus, Send, Sparkles, Square,} from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import {
-    Tooltip,
-    TooltipTrigger,
-    TooltipContent,
-} from "@/components/ui/tooltip";
-import { listSkills } from "@/services/agent-service";
+import {cn} from "@/lib/utils";
+import {Tooltip, TooltipContent, TooltipTrigger,} from "@/components/ui/tooltip";
+import {listSkills} from "@/services/agent-service";
 
 const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
 

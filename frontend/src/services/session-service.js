@@ -4,11 +4,11 @@
  */
 
 /** Create a new session (conversation container). */
-export async function createSession({ title, kind = "root", topic_id = "main" } = {}) {
+export async function createSession({title, kind = "root", topic_id = "main"} = {}) {
     const res = await fetch("/sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, title, topic_id }),
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({kind, title, topic_id}),
     });
     if (!res.ok) throw new Error(`createSession: ${res.status}`);
     return res.json();
@@ -29,11 +29,11 @@ export async function getSession(id) {
 }
 
 /** Update a session's title / status. */
-export async function updateSession(id, { title, status } = {}) {
+export async function updateSession(id, {title, status} = {}) {
     const res = await fetch(`/sessions/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, status }),
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({title, status}),
     });
     if (!res.ok) throw new Error(`updateSession: ${res.status}`);
     return res.json();
@@ -46,8 +46,8 @@ export async function updateSession(id, { title, status } = {}) {
 export async function setPreview(id, preview, speaker) {
     const res = await fetch(`/sessions/${encodeURIComponent(id)}/preview`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ preview, speaker }),
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({preview, speaker}),
     });
     if (!res.ok) throw new Error(`setPreview: ${res.status}`);
     return res.json();

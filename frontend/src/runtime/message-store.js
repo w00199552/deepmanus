@@ -13,9 +13,9 @@
  * @module runtim./message-store
  */
 
-import { makeAutoObservable } from "mobx";
+import {makeAutoObservable} from "mobx";
 
-import { reduceEvent } from "./event-reducer.js";
+import {reduceEvent} from "./event-reducer.js";
 
 export class MessageStore {
     /** @type {Record<string, import('./event-reducer').Message[]>} session_id → messages */

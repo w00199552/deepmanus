@@ -1,30 +1,20 @@
-import { observer } from "mobx-react-lite";
-import { useEffect, useState } from "react";
-import {
-    AlertCircle,
-    Bot,
-    Check,
-    ChevronLeft,
-    FileText,
-    Lock,
-    Save,
-    Sparkles,
-    Wrench,
-} from "lucide-react";
+import {observer} from "mobx-react-lite";
+import {useEffect, useState} from "react";
+import {AlertCircle, Bot, Check, ChevronLeft, FileText, Lock, Save, Sparkles, Wrench,} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 
-import { useStore } from "@/hooks/use-store";
-import { useTheme } from "@/hooks/use-theme";
-import { Avatar } from "@/components/avatar";
-import { FancyButton } from "@/components/ui/fancy-button";
-import { cn } from "@/lib/utils";
+import {useStore} from "@/hooks/use-store";
+import {useTheme} from "@/hooks/use-theme";
+import {Avatar} from "@/components/avatar";
+import {FancyButton} from "@/components/ui/fancy-button";
+import {cn} from "@/lib/utils";
 
 /**
  * AgentsView — card grid → click to open config (left tabs: Prompt / Tools).
  * Calls agentStore actions only (view → store → service).
  */
 export const AgentsView = observer(function AgentsView() {
-    const { agentStore } = useStore();
+    const {agentStore} = useStore();
     const [selected, setSelected] = useState(null);
     const [createMode, setCreateMode] = useState(false);
 
@@ -42,7 +32,7 @@ export const AgentsView = observer(function AgentsView() {
                 onBack={() => {
                     setSelected(null);
                     agentStore.clearCurrent();
-                    agentStore.loadAgents();
+                    agentStore.loadAgents().then();
                 }}
             />
         );
@@ -55,7 +45,7 @@ export const AgentsView = observer(function AgentsView() {
                 onCreated={(name) => {
                     setCreateMode(false);
                     setSelected(name);
-                    agentStore.selectAgent(name);
+                    agentStore.selectAgent(name).then();
                 }}
             />
         );
@@ -68,7 +58,7 @@ export const AgentsView = observer(function AgentsView() {
             {agentStore.toast && <Toast {...agentStore.toast} />}
             <div className="mx-auto max-w-5xl px-6 py-8">
                 <div className="mb-6 flex items-center justify-between">
-                    <Header />
+                    <Header/>
                     <FancyButton onClick={() => setCreateMode(true)}>
                         New Agent
                     </FancyButton>
@@ -85,7 +75,7 @@ export const AgentsView = observer(function AgentsView() {
                                     agent={a}
                                     onClick={() => {
                                         setSelected(a.name);
-                                        agentStore.selectAgent(a.name);
+                                        agentStore.selectAgent(a.name).then();
                                     }}
                                 />
                             ))}
@@ -104,7 +94,7 @@ export const AgentsView = observer(function AgentsView() {
                                     agent={a}
                                     onClick={() => {
                                         setSelected(a.name);
-                                        agentStore.selectAgent(a.name);
+                                        agentStore.selectAgent(a.name).then();
                                     }}
                                 />
                             ))}
@@ -118,9 +108,9 @@ export const AgentsView = observer(function AgentsView() {
 
 // ─── Agent detail (left tabs + right content) ───────────────────────────────
 
-const AgentDetail = observer(function AgentDetail({ name, onBack }) {
-    const { agentStore: s } = useStore();
-    const { isDark } = useTheme();
+const AgentDetail = observer(function AgentDetail({name, onBack}) {
+    const {agentStore: s} = useStore();
+    const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
     const [tab, setTab] = useState("prompt");
 
@@ -129,19 +119,19 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
     return (
         <div className="flex h-full">
             {s.toast && <Toast {...s.toast} />}
-            {/* left sidebar */}
+
             <div className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/20">
                 <button
                     onClick={onBack}
                     className="flex items-center gap-1 px-4 py-3 text-sm text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
                 >
-                    <ChevronLeft className="size-4" />
+                    <ChevronLeft className="size-4"/>
                     Agents
                 </button>
 
                 <div className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                        <Avatar seed={s.current.name} size={36} version={s.avatarVersion} />
+                        <Avatar seed={s.current.name} size={36} version={s.avatarVersion}/>
                         <div>
                             <div className="text-sm font-medium">
                                 {s.current.name}
@@ -157,42 +147,42 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                     <TabBtn
                         active={tab === "info"}
                         onClick={() => setTab("info")}
-                        icon={<Bot className="size-3.5" />}
+                        icon={<Bot className="size-3.5"/>}
                     >
                         Info
                     </TabBtn>
                     <TabBtn
                         active={tab === "prompt"}
                         onClick={() => setTab("prompt")}
-                        icon={<FileText className="size-3.5" />}
+                        icon={<FileText className="size-3.5"/>}
                     >
                         Prompt
                     </TabBtn>
                     <TabBtn
                         active={tab === "tools"}
                         onClick={() => setTab("tools")}
-                        icon={<Wrench className="size-3.5" />}
+                        icon={<Wrench className="size-3.5"/>}
                     >
                         Tools
                     </TabBtn>
                     <TabBtn
                         active={tab === "skills"}
                         onClick={() => setTab("skills")}
-                        icon={<Sparkles className="size-3.5" />}
+                        icon={<Sparkles className="size-3.5"/>}
                     >
                         Skills
                     </TabBtn>
                     <TabBtn
                         active={tab === "subagents"}
                         onClick={() => setTab("subagents")}
-                        icon={<Bot className="size-3.5" />}
+                        icon={<Bot className="size-3.5"/>}
                     >
                         SubAgents
                     </TabBtn>
                     <TabBtn
                         active={tab === "interrupt"}
                         onClick={() => setTab("interrupt")}
-                        icon={<AlertCircle className="size-3.5" />}
+                        icon={<AlertCircle className="size-3.5"/>}
                     >
                         Interrupt
                     </TabBtn>
@@ -204,7 +194,7 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                         disabled={s.saving}
                         className="flex w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 px-3 py-2 text-[13px] text-accent transition hover:bg-accent/25 disabled:opacity-50"
                     >
-                        <Save className="size-3.5" />
+                        <Save className="size-3.5"/>
                         {s.saving ? "Saving…" : "Save"}
                     </button>
                 </div>
@@ -227,7 +217,7 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                     disabled={s.avatarLoading}
                                     className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-sidebar/30 px-3 py-2 text-[12px] text-muted-foreground transition hover:border-accent/40 hover:text-foreground disabled:opacity-50"
                                 >
-                                    <Sparkles className={cn("size-3.5", s.avatarLoading && "animate-spin")} />
+                                    <Sparkles className={cn("size-3.5", s.avatarLoading && "animate-spin")}/>
                                     {s.avatarLoading ? "生成中…" : "重新生成"}
                                 </button>
                             </div>
@@ -235,7 +225,8 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                 <label className="mb-1 block text-[12px] font-medium text-muted-foreground">
                                     Name
                                 </label>
-                                <div className="rounded-lg border border-border/40 bg-sidebar/20 px-3 py-2 text-[13px] text-muted-foreground">
+                                <div
+                                    className="rounded-lg border border-border/40 bg-sidebar/20 px-3 py-2 text-[13px] text-muted-foreground">
                                     {s.current.name}
                                 </div>
                             </div>
@@ -273,7 +264,7 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                     height="100%"
                                     preview="live"
                                     data-color-mode={colorMode}
-                                    style={{ height: "100%" }}
+                                    style={{height: "100%"}}
                                 />
                             </div>
                         </div>
@@ -310,7 +301,7 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                                 )}
                                             >
                                                 {checked && (
-                                                    <Check className="size-3 text-accent-foreground" />
+                                                    <Check className="size-3 text-accent-foreground"/>
                                                 )}
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -322,7 +313,7 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                                         className={cn(
                                                             "rounded-sm px-1 py-0.5 text-[9px]",
                                                             tool.source ===
-                                                                "user"
+                                                            "user"
                                                                 ? "bg-foreground/10 text-foreground/80"
                                                                 : "bg-muted/20 text-muted-foreground"
                                                         )}
@@ -380,7 +371,7 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                                     )}
                                                 >
                                                     {checked && (
-                                                        <Check className="size-3 text-accent-foreground" />
+                                                        <Check className="size-3 text-accent-foreground"/>
                                                     )}
                                                 </div>
                                                 <div className="min-w-0 flex-1">
@@ -389,7 +380,8 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                                             {skill.name}
                                                         </span>
                                                         {skill.has_scripts && (
-                                                            <span className="rounded-sm bg-foreground/10 px-1 py-0.5 text-[9px] text-muted-foreground">
+                                                            <span
+                                                                className="rounded-sm bg-foreground/10 px-1 py-0.5 text-[9px] text-muted-foreground">
                                                                 scripts
                                                             </span>
                                                         )}
@@ -437,21 +429,21 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
 
 // ─── small components ───────────────────────────────────────────────────────
 
-function AgentCard({ agent, onClick }) {
+function AgentCard({agent, onClick}) {
     return (
         <button
             onClick={onClick}
             className="rounded-card group p-6 text-left"
         >
             <div className="mb-4 flex items-center gap-3">
-                <Avatar seed={agent.name} size={44} />
+                <Avatar seed={agent.name} size={44}/>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1">
                         <span className="truncate font-display text-base font-medium tracking-tight">
                             {agent.name}
                         </span>
                         {agent.is_builtin && (
-                            <Lock className="size-3 shrink-0 text-muted-foreground/50" />
+                            <Lock className="size-3 shrink-0 text-muted-foreground/50"/>
                         )}
                     </div>
                 </div>
@@ -464,7 +456,7 @@ function AgentCard({ agent, onClick }) {
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                 {agent.tools.length > 0 ? (
                     <>
-                        <Wrench className="size-3" />
+                        <Wrench className="size-3"/>
                         <span className="truncate">
                             {agent.tools.join(", ")}
                         </span>
@@ -481,14 +473,14 @@ function Header() {
     return (
         <div className="mb-6 flex items-center gap-2.5">
             <span className="flex size-8 items-center justify-center rounded-lg bg-foreground/5 ring-1 ring-border/60">
-                <Bot className="size-4 text-foreground/70" />
+                <Bot className="size-4 text-foreground/70"/>
             </span>
             <h1 className="h-display">Agents</h1>
         </div>
     );
 }
 
-function TabBtn({ active, onClick, icon, children }) {
+function TabBtn({active, onClick, icon, children}) {
     return (
         <button
             onClick={onClick}
@@ -507,9 +499,9 @@ function TabBtn({ active, onClick, icon, children }) {
 
 // ─── Create new agent form ──────────────────────────────────────────────────
 
-const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
-    const { agentStore: s } = useStore();
-    const { isDark } = useTheme();
+const CreateAgent = observer(function CreateAgent({onBack, onCreated}) {
+    const {agentStore: s} = useStore();
+    const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
     const [tab, setTab] = useState("info");
     const [name, setName] = useState("");
@@ -562,7 +554,7 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
                     onClick={onBack}
                     className="flex items-center gap-1 px-4 py-3 text-sm text-muted-foreground transition hover:bg-foreground/5 hover:text-foreground"
                 >
-                    <ChevronLeft className="size-4" />
+                    <ChevronLeft className="size-4"/>
                     Agents
                 </button>
                 <div className="px-4 py-2">
@@ -574,42 +566,42 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
                     <TabBtn
                         active={tab === "info"}
                         onClick={() => setTab("info")}
-                        icon={<Bot className="size-3.5" />}
+                        icon={<Bot className="size-3.5"/>}
                     >
                         Info
                     </TabBtn>
                     <TabBtn
                         active={tab === "prompt"}
                         onClick={() => setTab("prompt")}
-                        icon={<FileText className="size-3.5" />}
+                        icon={<FileText className="size-3.5"/>}
                     >
                         Prompt
                     </TabBtn>
                     <TabBtn
                         active={tab === "tools"}
                         onClick={() => setTab("tools")}
-                        icon={<Wrench className="size-3.5" />}
+                        icon={<Wrench className="size-3.5"/>}
                     >
                         Tools
                     </TabBtn>
                     <TabBtn
                         active={tab === "skills"}
                         onClick={() => setTab("skills")}
-                        icon={<Sparkles className="size-3.5" />}
+                        icon={<Sparkles className="size-3.5"/>}
                     >
                         Skills
                     </TabBtn>
                     <TabBtn
                         active={tab === "subagents"}
                         onClick={() => setTab("subagents")}
-                        icon={<Bot className="size-3.5" />}
+                        icon={<Bot className="size-3.5"/>}
                     >
                         SubAgents
                     </TabBtn>
                     <TabBtn
                         active={tab === "interrupt"}
                         onClick={() => setTab("interrupt")}
-                        icon={<AlertCircle className="size-3.5" />}
+                        icon={<AlertCircle className="size-3.5"/>}
                     >
                         Interrupt
                     </TabBtn>
@@ -620,7 +612,7 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
                         disabled={!name.trim() || s.saving}
                         className="flex w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 px-3 py-2 text-[13px] text-accent transition hover:bg-accent/25 disabled:opacity-50"
                     >
-                        <Save className="size-3.5" />
+                        <Save className="size-3.5"/>
                         {s.saving ? "Creating…" : "Create"}
                     </button>
                 </div>
@@ -679,7 +671,7 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
                                     height="100%"
                                     preview="live"
                                     data-color-mode={colorMode}
-                                    style={{ height: "100%" }}
+                                    style={{height: "100%"}}
                                 />
                             </div>
                         </div>
@@ -719,7 +711,7 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
                                                 )}
                                             >
                                                 {checked && (
-                                                    <Check className="size-3 text-accent-foreground" />
+                                                    <Check className="size-3 text-accent-foreground"/>
                                                 )}
                                             </div>
                                             <div className="min-w-0 flex-1">
@@ -731,7 +723,7 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
                                                         className={cn(
                                                             "rounded-sm px-1 py-0.5 text-[9px]",
                                                             tool.source ===
-                                                                "user"
+                                                            "user"
                                                                 ? "bg-foreground/10 text-foreground/80"
                                                                 : "bg-muted/20 text-muted-foreground"
                                                         )}
@@ -788,7 +780,7 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
                                                     )}
                                                 >
                                                     {checked && (
-                                                        <Check className="size-3 text-accent-foreground" />
+                                                        <Check className="size-3 text-accent-foreground"/>
                                                     )}
                                                 </div>
                                                 <div className="min-w-0 flex-1">
@@ -836,7 +828,7 @@ const CreateAgent = observer(function CreateAgent({ onBack, onCreated }) {
     );
 });
 
-function Centered({ children }) {
+function Centered({children}) {
     return (
         <div className="flex h-full items-center justify-center">
             <p className="text-sm text-muted-foreground">{children}</p>
@@ -844,7 +836,7 @@ function Centered({ children }) {
     );
 }
 
-function SectionTitle({ children }) {
+function SectionTitle({children}) {
     return (
         <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-foreground/45">
             {children}
@@ -852,7 +844,7 @@ function SectionTitle({ children }) {
     );
 }
 
-function Toast({ type, message }) {
+function Toast({type, message}) {
     return (
         <div
             className={cn(
@@ -863,9 +855,9 @@ function Toast({ type, message }) {
             )}
         >
             {type === "error" ? (
-                <AlertCircle className="size-3.5" />
+                <AlertCircle className="size-3.5"/>
             ) : (
-                <Check className="size-3.5" />
+                <Check className="size-3.5"/>
             )}
             {message}
         </div>

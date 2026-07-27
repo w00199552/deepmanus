@@ -9,10 +9,10 @@
  * nothing mutates the input.
  */
 
-import { test } from "node:test";
+import {test} from "node:test";
 import assert from "node:assert/strict";
 
-import { ensureMessage, reduceEvent, replaceMessage } from "./event-reducer.js";
+import {ensureMessage, reduceEvent, replaceMessage} from "./event-reducer.js";
 
 /** helper: text length of the last message's concatenated text parts */
 function lastText(messages) {

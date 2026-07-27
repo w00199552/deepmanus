@@ -21,10 +21,10 @@
  * @module runtime/agentRuntime
  */
 
-import { makeAutoObservable, runInAction } from "mobx";
+import {makeAutoObservable, runInAction} from "mobx";
 
-import { MessageStore } from "./message-store.js";
-import { StreamClient } from "./stream-client.js";
+import {MessageStore} from "./message-store.js";
+import {StreamClient} from "./stream-client.js";
 
 const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
 

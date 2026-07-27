@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import {useState} from "react";
+import {cn} from "@/lib/utils";
 
 /**
  * Avatar components — DiceBear "adventurer" style, zero-dependency via HTTP API.
@@ -45,7 +45,9 @@ function avatarUrl(seed) {
  * Returns null if agentName is falsy or not a real agent name (e.g. "user-face").
  */
 const NON_AGENT_SEEDS = new Set(["user-face", "team", "unknown", "default", "main"]);
+
 export function localAvatarUrl(agentName, version) {
+    console.log("localAvatarUrl", agentName, version);
     if (!agentName || NON_AGENT_SEEDS.has(agentName)) return null;
     const base = `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
     return version ? `${base}?v=${version}` : base;
@@ -58,7 +60,7 @@ export function localAvatarUrl(agentName, version) {
  * @param {string} [src]  optional explicit image URL (overrides local lookup)
  * @param {number} [version]  cache-busting version for local avatar reload
  */
-export function Avatar({ seed, size = 36, className, src, version }) {
+export function Avatar({seed, size = 36, className, src, version}) {
     const [useFallback, setUseFallback] = useState(false);
     const localSrc = src || localAvatarUrl(seed, version);
     const imgSrc = (localSrc && !useFallback) ? localSrc : avatarUrl(seed);
@@ -77,7 +79,7 @@ export function Avatar({ seed, size = 36, className, src, version }) {
                 "shrink-0 rounded-full bg-card/60 object-cover ring-1 ring-border",
                 className
             )}
-            style={{ width: size, height: size }}
+            style={{width: size, height: size}}
         />
     );
 }
@@ -93,14 +95,14 @@ export function Avatar({ seed, size = 36, className, src, version }) {
  * @param {string[]} seeds  member identity seeds (1-4)
  * @param {number}   [size=36] px of the whole badge
  */
-export function TeamAvatar({ seeds, size = 36 }) {
+export function TeamAvatar({seeds, size = 36}) {
     const list = (seeds && seeds.length ? seeds : ["team"]).slice(0, 4);
     const mini = Math.round(size * 0.42);
 
     return (
         <div
             className="relative flex shrink-0 items-center justify-center rounded-xl bg-sidebar ring-1 ring-border"
-            style={{ width: size, height: size }}
+            style={{width: size, height: size}}
         >
             <div
                 className="grid place-items-center"
@@ -110,7 +112,7 @@ export function TeamAvatar({ seeds, size = 36 }) {
                 }}
             >
                 {list.slice(0, 4).map((seed, i) => (
-                    <MiniAvatar key={i} seed={seed} size={mini} />
+                    <MiniAvatar key={i} seed={seed} size={mini}/>
                 ))}
             </div>
         </div>
@@ -118,7 +120,7 @@ export function TeamAvatar({ seeds, size = 36 }) {
 }
 
 /** A mini avatar inside TeamAvatar — supports local SVG + DiceBear fallback. */
-function MiniAvatar({ seed, size }) {
+function MiniAvatar({seed, size}) {
     const [useFallback, setUseFallback] = useState(false);
     const localSrc = localAvatarUrl(seed);
     const imgSrc = (localSrc && !useFallback) ? localSrc : avatarUrl(seed);
@@ -129,9 +131,11 @@ function MiniAvatar({ seed, size }) {
             width={size}
             height={size}
             loading="lazy"
-            onError={() => { if (!useFallback && localSrc) setUseFallback(true); }}
+            onError={() => {
+                if (!useFallback && localSrc) setUseFallback(true);
+            }}
             className="rounded-full bg-card object-cover ring-1 ring-card"
-            style={{ width: size, height: size }}
+            style={{width: size, height: size}}
         />
     );
 }
@@ -143,35 +147,11 @@ function MiniAvatar({ seed, size }) {
  * @param {string[]} agents  agent names in this topic
  * @param {number} [size=36]
  */
-export function TopicAvatar({ agents, size = 36 }) {
-    const list = (agents && agents.length > 0) ? agents : ["unknown"];
-    if (list.length === 1) {
-        return <Avatar seed={list[0]} size={size} />;
+export function TopicAvatar({topic, size = 36}) {
+    console.log("topic", topic);
+    if (topic.kind === "team") {
+        return <TeamAvatar seeds={topic.agents} size={size}/>;
+    } else {
+        return <Avatar seed={topic.agents[0]} size={size}/>;
     }
-    return <TeamAvatar seeds={list} size={size} />;
-}
-
-/**
- * Pick the right avatar for a session based on its kind + role data.
- * Returns the component to render.
- *
- * @param {object} session  the session row (kind, id, name, metadata)
- * @param {number} [size]
- */
-export function SessionAvatar({ session, size = 36 }) {
-    if (session.kind === "team") {
-        // members: prefer metadata.members if present, else a sensible default roster
-        const members = session.metadata?.members || [
-            "TeamLeader",
-            "Researcher",
-            "Coder",
-        ];
-        return <TeamAvatar seeds={members} size={size} />;
-    }
-    // Seed by agent name (stable identity): same agent = same face everywhere
-    // (topicList, message stream, agents page). Accept both `name` (session)
-    // Seed by agent name (stable identity): same agent = same face everywhere.
-    // Accept `name` (session), `agents[0]` (topic object), or fallback to id.
-    const seed = session.name || (session.agents && session.agents[0]) || session.id || "unknown";
-    return <Avatar seed={seed} size={size} />;
 }

@@ -18,6 +18,7 @@
     font-style: normal;
     font-display: swap;
 }
+
 @font-face {
     font-family: "Satoshi";
     src: url("/fonts/Satoshi-500.woff2") format("woff2");
@@ -25,6 +26,7 @@
     font-style: normal;
     font-display: swap;
 }
+
 @font-face {
     font-family: "Satoshi";
     src: url("/fonts/Satoshi-700.woff2") format("woff2");
@@ -32,6 +34,7 @@
     font-style: normal;
     font-display: swap;
 }
+
 @font-face {
     font-family: "ClashDisplay";
     src: url("/fonts/ClashDisplay-500.woff2") format("woff2");
@@ -39,6 +42,7 @@
     font-style: normal;
     font-display: swap;
 }
+
 @font-face {
     font-family: "ClashDisplay";
     src: url("/fonts/ClashDisplay-600.woff2") format("woff2");
@@ -85,7 +89,7 @@
 
     --font-sans: "Satoshi", ui-sans-serif, system-ui, -apple-system, sans-serif;
     --font-display: "ClashDisplay", "Satoshi", ui-sans-serif, system-ui,
-        sans-serif;
+    sans-serif;
     --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
 }
 
@@ -238,7 +242,7 @@
         color-scheme: light;
         /* Satoshi for UI chrome (display headings opt-in via .font-display) */
         font-family: "Satoshi", ui-sans-serif, system-ui, -apple-system,
-            sans-serif;
+        sans-serif;
         font-feature-settings: "ss01";
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
@@ -257,7 +261,7 @@
     h2,
     h3 {
         font-family: "ClashDisplay", "Satoshi", ui-sans-serif, system-ui,
-            sans-serif;
+        sans-serif;
         font-weight: 500;
         letter-spacing: -0.01em;
     }
@@ -278,6 +282,7 @@ input::placeholder {
 [style*="appRegion: drag"] {
     -webkit-app-region: drag;
 }
+
 [style*="app-region: no-drag"],
 [style*="appRegion: no-drag"] {
     -webkit-app-region: no-drag;
@@ -296,13 +301,16 @@ kbd {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: hsl(240 5% 20%);
     border-radius: 999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: hsl(88 100% 72% / 0.4);
 }
@@ -317,11 +325,13 @@ kbd {
 .sep-line {
     background: hsl(var(--border));
 }
+
 .sep-bar:hover .sep-line,
 .sep-bar[data-separator]:active .sep-line {
     background: hsl(var(--accent) / 0.7) !important;
     width: 2px;
 }
+
 /* Hover/drag grip: a tiny centered dot that fades in to signal "drag here".
    Pure CSS — no JSX changes needed. Only shows on hover so it stays out of
    the way at rest. */
@@ -338,6 +348,7 @@ kbd {
     transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: none;
 }
+
 .sep-bar:hover::after,
 .sep-bar[data-separator]:active::after {
     transform: translate(-50%, -50%) scaleX(1);
@@ -356,12 +367,14 @@ kbd {
         border: 1px solid hsl(var(--border) / 0.7);
         background-color: hsl(var(--card) / 0.5);
     }
+
     /* Stronger raised surface (used on hover, active rails). */
     .surface-raised {
         border-radius: var(--radius);
         border: 1px solid hsl(var(--border) / 0.7);
         background-color: hsl(var(--sidebar) / 0.4);
     }
+
     /* Whisper-thin horizontal divider (devraj editorial style). */
     .hairline {
         height: 1px;
@@ -383,19 +396,21 @@ kbd {
         background-color: hsl(var(--foreground) / 0.025);
         border: 1px solid hsl(var(--foreground) / 0.12);
         border-radius: 1.5rem; /* 24px — matches devraj rounded-3xl */
-        transition:
-            border-color 0.3s ease,
-            background-color 0.3s ease;
+        transition: border-color 0.3s ease,
+        background-color 0.3s ease;
     }
+
     .rounded-card:hover {
         border-color: hsl(var(--foreground) / 0.25);
         background-color: hsl(var(--foreground) / 0.04);
     }
+
     /* Dark mode: invert the tint direction — sidebar (light tint) lifts
        the card on the dark canvas. */
     .dark .rounded-card {
         background-color: hsl(var(--sidebar) / 0.18);
     }
+
     .dark .rounded-card:hover {
         border-color: hsl(var(--foreground) / 0.4);
         background-color: hsl(var(--sidebar) / 0.35);
@@ -412,13 +427,14 @@ kbd {
         border: 0;
         border-bottom: 1px solid hsl(var(--border));
         border-radius: 0;
-        transition:
-            border-color 0.3s ease,
-            color 0.3s ease;
+        transition: border-color 0.3s ease,
+        color 0.3s ease;
     }
+
     .hairline-card:hover {
         border-bottom-color: hsl(var(--foreground) / 0.35);
     }
+
     /* Remove the bottom hairline on the last row of a group so the list
        doesn't double up with the container's own edge. */
     .hairline-card-group > .hairline-card:last-child {
@@ -440,6 +456,7 @@ kbd {
         padding: 1rem;
         color: hsl(var(--accent));
     }
+
     .dark .card-icon-badge {
         background-color: hsl(var(--sidebar) / 0.5);
     }
@@ -447,15 +464,16 @@ kbd {
     /* Display headings — ClashDisplay, weight 500, tight leading. */
     .h-display {
         font-family: "ClashDisplay", "Satoshi", ui-sans-serif, system-ui,
-            sans-serif;
+        sans-serif;
         font-size: 1.875rem; /* 30px — page-level presence */
         font-weight: 500;
         line-height: 1.1;
         letter-spacing: -0.015em;
     }
+
     .h-section {
         font-family: "ClashDisplay", "Satoshi", ui-sans-serif, system-ui,
-            sans-serif;
+        sans-serif;
         font-size: 1rem;
         font-weight: 500;
         line-height: 1.2;
@@ -467,7 +485,7 @@ kbd {
     /* Display font opt-in (for non-heading elements that need display feel). */
     .font-display {
         font-family: "ClashDisplay", "Satoshi", ui-sans-serif, system-ui,
-            sans-serif;
+        sans-serif;
     }
 
     /* Content width: focused column for chat messages / input */
@@ -480,15 +498,19 @@ kbd {
     .text-role-teamleader {
         color: hsl(var(--role-teamleader));
     }
+
     .text-role-researcher {
         color: hsl(var(--role-researcher));
     }
+
     .text-role-coder {
         color: hsl(var(--role-coder));
     }
+
     .text-role-user {
         color: hsl(var(--role-user));
     }
+
     .text-role-system {
         color: hsl(var(--role-system));
     }
@@ -499,18 +521,23 @@ kbd {
     .anim-rise {
         animation: rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
+
     .anim-delay-1 {
         animation-delay: 80ms;
     }
+
     .anim-delay-2 {
         animation-delay: 160ms;
     }
+
     .anim-delay-3 {
         animation-delay: 240ms;
     }
+
     .anim-delay-4 {
         animation-delay: 320ms;
     }
+
     @keyframes rise {
         from {
             opacity: 0;
@@ -526,6 +553,7 @@ kbd {
     .animate-pulse-dot {
         animation: pulse-dot 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
+
     @keyframes pulse-dot {
         0%,
         100% {
@@ -545,20 +573,21 @@ kbd {
        running dots, and the Send button. */
     .accent-glow {
         box-shadow: 0 0 0 1px hsl(var(--accent) / 0.3),
-            0 0 14px -2px hsl(var(--accent) / 0.45);
+        0 0 14px -2px hsl(var(--accent) / 0.45);
     }
+
     .accent-glow-strong {
         box-shadow: 0 0 0 1px hsl(var(--accent) / 0.4),
-            0 0 22px -2px hsl(var(--accent) / 0.6);
+        0 0 22px -2px hsl(var(--accent) / 0.6);
     }
 
     /* Subtle hover lift for cards / list items. */
     .lift-on-hover {
-        transition:
-            transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-            border-color 0.2s ease,
-            background-color 0.2s ease;
+        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+        border-color 0.2s ease,
+        background-color 0.2s ease;
     }
+
     .lift-on-hover:hover {
         transform: translateY(-1px);
     }
@@ -570,6 +599,7 @@ kbd {
         color: hsl(var(--accent));
         animation: blink 1s step-end infinite;
     }
+
     @keyframes blink {
         50% {
             opacity: 0;
@@ -580,22 +610,26 @@ kbd {
     .focus-ring {
         outline: none;
         box-shadow: 0 0 0 2px hsl(var(--background)),
-            0 0 0 4px hsl(var(--accent) / 0.5);
+        0 0 0 4px hsl(var(--accent) / 0.5);
     }
 
     /* role dot helpers */
     .dot-teamleader {
         background: hsl(var(--role-teamleader));
     }
+
     .dot-researcher {
         background: hsl(var(--role-researcher));
     }
+
     .dot-coder {
         background: hsl(var(--role-coder));
     }
+
     .dot-user {
         background: hsl(var(--role-user));
     }
+
     .dot-system {
         background: hsl(var(--role-system));
     }

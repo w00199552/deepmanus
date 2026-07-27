@@ -1,8 +1,8 @@
-import { Settings, LogIn, Sun, Moon } from "lucide-react";
+import {LogIn, Moon, Settings, Sun} from "lucide-react";
 
-import { cn } from "@/lib/utils";
-import { useTheme } from "@/hooks/use-theme";
-import { WindowControls } from "@/components/window-controls";
+import {cn} from "@/lib/utils";
+import {useTheme} from "@/hooks/use-theme";
+import {WindowControls} from "@/components/window-controls";
 
 // Nav items with "active" = implemented (clickable).
 const NAV_ITEMS = [

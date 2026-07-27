@@ -1,23 +1,23 @@
-import { observer } from "mobx-react-lite";
-import { useEffect, useState, useCallback } from "react";
+import {observer} from "mobx-react-lite";
+import {useCallback, useEffect, useState} from "react";
 import {
-    Wrench,
+    ChevronDown,
     ChevronLeft,
     ChevronRight,
-    ChevronDown,
-    FileText,
-    FileCode,
     File,
+    FileCode,
+    FileText,
     Folder,
     FolderOpen,
     Loader2,
     Lock,
+    Wrench,
 } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
-import { Highlight, themes } from "prism-react-renderer";
+import {Highlight, themes} from "prism-react-renderer";
 
-import { cn } from "@/lib/utils";
-import { useTheme } from "@/hooks/use-theme";
+import {cn} from "@/lib/utils";
+import {useTheme} from "@/hooks/use-theme";
 
 const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
 

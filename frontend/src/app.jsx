@@ -1,4 +1,4 @@
-import { Workspace } from "@/views/workspace";
+import {Workspace} from "@/views/workspace";
 
 /**
  * App shell. The whole UI is the resizable workspace.

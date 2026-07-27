@@ -1,38 +1,34 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
-import { observer } from "mobx-react-lite";
+import {useCallback, useEffect, useRef, useState} from "react";
+import {createPortal} from "react-dom";
+import {observer} from "mobx-react-lite";
 import {
-    ChevronRight,
+    Check,
     ChevronDown,
-    FileText,
-    FileCode,
+    ChevronRight,
+    ClipboardCopy,
     File,
+    FileCode,
+    FilePlus,
+    FileText,
     Folder,
     FolderOpen,
-    Save,
-    Loader2,
-    FolderTree,
-    FilePlus,
     FolderPlus,
-    Trash2,
+    FolderTree,
+    Loader2,
     Plus,
-    ClipboardCopy,
-    Check,
+    Save,
+    Trash2,
 } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
-import { Highlight, themes } from "prism-react-renderer";
-import { Group, Panel, Separator } from "react-resizable-panels";
+import {Highlight, themes} from "prism-react-renderer";
+import {Group, Panel, Separator} from "react-resizable-panels";
 
-import { useStore } from "@/hooks/use-store";
-import { useTheme } from "@/hooks/use-theme";
-import { cn, joinAbsPath, copyText } from "@/lib/utils";
-import { ConfirmDialog } from "@/components/sandbox/confirm-dialog";
-import { usePlaygroundToolbar } from "@/components/playground/playground-context";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover";
+import {useStore} from "@/hooks/use-store";
+import {useTheme} from "@/hooks/use-theme";
+import {cn, copyText, joinAbsPath} from "@/lib/utils";
+import {ConfirmDialog} from "@/components/sandbox/confirm-dialog";
+import {usePlaygroundToolbar} from "@/components/playground/playground-context";
+import {Popover, PopoverContent, PopoverTrigger,} from "@/components/ui/popover";
 
 /**
  * SandboxTool — file tree + content editor for the Sandbox, hosted inside
@@ -51,8 +47,8 @@ import {
  * local to this component while the toolbar stays visually unified.
  */
 export const SandboxTool = observer(function SandboxTool() {
-    const { sandbox } = useStore();
-    const { isDark } = useTheme();
+    const {sandbox} = useStore();
+    const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
     // DOM ref to the shell's toolbar-right slot — our actions portal there.
     const toolbarRightRef = usePlaygroundToolbar();
@@ -99,7 +95,7 @@ export const SandboxTool = observer(function SandboxTool() {
             setLoadingByDir((prev) => new Set(prev).add(dirPath));
             try {
                 const children = await sandbox.loadChildren(dirPath);
-                setChildrenByDir((prev) => ({ ...prev, [dirPath]: children }));
+                setChildrenByDir((prev) => ({...prev, [dirPath]: children}));
             } catch {
                 /* ignore */
             } finally {
@@ -122,7 +118,7 @@ export const SandboxTool = observer(function SandboxTool() {
         async (dirPath) => {
             try {
                 const children = await sandbox.loadChildren(dirPath);
-                setChildrenByDir((prev) => ({ ...prev, [dirPath]: children }));
+                setChildrenByDir((prev) => ({...prev, [dirPath]: children}));
             } catch {
                 /* ignore */
             }
@@ -172,13 +168,13 @@ export const SandboxTool = observer(function SandboxTool() {
 
     // initial load
     useEffect(() => {
-        loadTree();
+        loadTree().then();
     }, [loadTree]);
 
     // reload tree when workdir changes (cd or session switch)
     useEffect(() => {
         if (sandbox.workdir) {
-            loadTree();
+            loadTree().then();
             setFile(null);
         }
     }, [sandbox.workdir, loadTree]);
@@ -195,9 +191,9 @@ export const SandboxTool = observer(function SandboxTool() {
             // refresh root if "" is pending, else refresh specific expanded dirs
             for (const dir of dirs) {
                 if (dir === "") {
-                    refreshRoot();
+                    refreshRoot().then();
                 } else if (expandedRef.current.has(dir)) {
-                    refreshDir(dir);
+                    refreshDir(dir).then();
                 }
             }
         };
@@ -226,7 +222,7 @@ export const SandboxTool = observer(function SandboxTool() {
                 if (evt.type === "modified") {
                     const f = fileRef.current;
                     if (f && evt.path === f.path && !dirtyRef.current) {
-                        loadFile(f.path);
+                        loadFile(f.path).then();
                     }
                 }
             } catch {
@@ -253,7 +249,7 @@ export const SandboxTool = observer(function SandboxTool() {
 
     const onSelectFile = (path) => {
         if (dirty && !confirm("Discard unsaved changes?")) return;
-        loadFile(path);
+        loadFile(path).then();
     };
 
     // ── Context menu actions ────────────────────────────────────────────────
@@ -297,7 +293,7 @@ export const SandboxTool = observer(function SandboxTool() {
     if (loading) {
         return (
             <div className="flex h-full items-center justify-center">
-                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                <Loader2 className="size-4 animate-spin text-muted-foreground"/>
             </div>
         );
     }
@@ -326,9 +322,9 @@ export const SandboxTool = observer(function SandboxTool() {
                             )}
                         >
                             {saving ? (
-                                <Loader2 className="size-3 animate-spin" />
+                                <Loader2 className="size-3 animate-spin"/>
                             ) : (
-                                <Save className="size-3" />
+                                <Save className="size-3"/>
                             )}
                             Save
                         </button>
@@ -339,148 +335,150 @@ export const SandboxTool = observer(function SandboxTool() {
             <div className="flex h-full flex-col">
                 {/* tree + content (resizable) */}
                 <Group orientation="horizontal" className="min-h-0 flex-1">
-                {/* file tree */}
-                <Panel
-                    id="sandbox-tree"
-                    defaultSize="25%"
-                    minSize="12%"
-                    maxSize="50%"
-                >
-                    <div className="flex h-full flex-col bg-sidebar/20">
-                        {/* current workdir header + new file/folder dropdown */}
-                        {sandbox.workdir && (
-                            <div
-                                className="flex shrink-0 items-center gap-1.5 border-b border-border/40 px-3 py-1.5"
-                                title={sandbox.workdir}
-                            >
-                                <FolderTree className="size-3.5 shrink-0 text-muted-foreground/60" />
-                                <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground/80">
+                    {/* file tree */}
+                    <Panel
+                        id="sandbox-tree"
+                        defaultSize="25%"
+                        minSize="12%"
+                        maxSize="50%"
+                    >
+                        <div className="flex h-full flex-col bg-sidebar/20">
+                            {/* current workdir header + new file/folder dropdown */}
+                            {sandbox.workdir && (
+                                <div
+                                    className="flex shrink-0 items-center gap-1.5 border-b border-border/40 px-3 py-1.5"
+                                    title={sandbox.workdir}
+                                >
+                                    <FolderTree className="size-3.5 shrink-0 text-muted-foreground/60"/>
+                                    <span
+                                        className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground/80">
                                     {sandbox.workdir}
                                 </span>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <button
-                                            className="shrink-0 rounded-md p-0.5 text-muted-foreground/60 transition hover:bg-sidebar/40 hover:text-foreground"
-                                            title="New File / Folder"
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <button
+                                                className="shrink-0 rounded-md p-0.5 text-muted-foreground/60 transition hover:bg-sidebar/40 hover:text-foreground"
+                                                title="New File / Folder"
+                                            >
+                                                <Plus className="size-3.5"/>
+                                            </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                            align="end"
+                                            className="w-40 p-1"
                                         >
-                                            <Plus className="size-3.5" />
-                                        </button>
-                                    </PopoverTrigger>
-                                    <PopoverContent
-                                        align="end"
-                                        className="w-40 p-1"
-                                    >
-                                        <button
-                                            onClick={() =>
-                                                setModal({
-                                                    mode: "newFile",
-                                                    node: {
-                                                        type: "dir",
-                                                        path: "",
-                                                        name: "",
-                                                    },
-                                                })
-                                            }
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-popover-foreground outline-none transition hover:bg-foreground/8 hover:text-foreground"
-                                        >
-                                            <FilePlus className="size-3.5" />{" "}
-                                            New File
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                setModal({
-                                                    mode: "newDir",
-                                                    node: {
-                                                        type: "dir",
-                                                        path: "",
-                                                        name: "",
-                                                    },
-                                                })
-                                            }
-                                            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-popover-foreground outline-none transition hover:bg-foreground/8 hover:text-foreground"
-                                        >
-                                            <FolderPlus className="size-3.5" />{" "}
-                                            New Folder
-                                        </button>
-                                    </PopoverContent>
-                                </Popover>
+                                            <button
+                                                onClick={() =>
+                                                    setModal({
+                                                        mode: "newFile",
+                                                        node: {
+                                                            type: "dir",
+                                                            path: "",
+                                                            name: "",
+                                                        },
+                                                    })
+                                                }
+                                                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-popover-foreground outline-none transition hover:bg-foreground/8 hover:text-foreground"
+                                            >
+                                                <FilePlus className="size-3.5"/>{" "}
+                                                New File
+                                            </button>
+                                            <button
+                                                onClick={() =>
+                                                    setModal({
+                                                        mode: "newDir",
+                                                        node: {
+                                                            type: "dir",
+                                                            path: "",
+                                                            name: "",
+                                                        },
+                                                    })
+                                                }
+                                                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-[13px] text-popover-foreground outline-none transition hover:bg-foreground/8 hover:text-foreground"
+                                            >
+                                                <FolderPlus className="size-3.5"/>{" "}
+                                                New Folder
+                                            </button>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            )}
+                            <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+                                {tree && (
+                                    <TreeContainer
+                                        node={tree}
+                                        expanded={expanded}
+                                        toggleDir={toggleDir}
+                                        onSelect={onSelectFile}
+                                        selectedPath={file?.path}
+                                        childrenByDir={childrenByDir}
+                                        loadingByDir={loadingByDir}
+                                        onContext={setModal}
+                                        workdir={sandbox.workdir}
+                                    />
+                                )}
                             </div>
-                        )}
-                        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-                            {tree && (
-                                <TreeContainer
-                                    node={tree}
-                                    expanded={expanded}
-                                    toggleDir={toggleDir}
-                                    onSelect={onSelectFile}
-                                    selectedPath={file?.path}
-                                    childrenByDir={childrenByDir}
-                                    loadingByDir={loadingByDir}
-                                    onContext={setModal}
-                                    workdir={sandbox.workdir}
+                        </div>
+                    </Panel>
+
+                    <Separator className="sep-bar relative w-1.5 cursor-col-resize">
+                        <span
+                            className="sep-line pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2"/>
+                    </Separator>
+
+                    {/* content */}
+                    <Panel id="sandbox-content" minSize="30%">
+                        <div
+                            className="h-full overflow-auto"
+                            data-color-mode={colorMode}
+                        >
+                            {file ? (
+                                <FileEditor
+                                    file={file}
+                                    draft={draft}
+                                    setDraft={(v) => {
+                                        setDraft(v);
+                                        setDirty(true);
+                                    }}
                                 />
+                            ) : (
+                                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                                    Select a file
+                                </div>
                             )}
                         </div>
-                    </div>
-                </Panel>
+                    </Panel>
+                </Group>
 
-                <Separator className="sep-bar relative w-1.5 cursor-col-resize">
-                    <span className="sep-line pointer-events-none absolute inset-y-0 left-1/2 w-px -translate-x-1/2" />
-                </Separator>
-
-                {/* content */}
-                <Panel id="sandbox-content" minSize="30%">
-                    <div
-                        className="h-full overflow-auto"
-                        data-color-mode={colorMode}
-                    >
-                        {file ? (
-                            <FileEditor
-                                file={file}
-                                draft={draft}
-                                setDraft={(v) => {
-                                    setDraft(v);
-                                    setDirty(true);
-                                }}
-                            />
-                        ) : (
-                            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                                Select a file
-                            </div>
-                        )}
-                    </div>
-                </Panel>
-            </Group>
-
-            {/* Context menu modal (delete confirm / new file/dir input) */}
-            {modal && (
-                <ConfirmDialog
-                    open
-                    mode={modal.mode}
-                    title={
-                        modal.mode === "delete"
-                            ? `Delete "${modal.node.name}"?`
-                            : modal.mode === "newFile"
-                              ? "New File"
-                              : "New Folder"
-                    }
-                    message={
-                        modal.mode === "delete"
-                            ? modal.node.type === "dir"
-                                ? `This will recursively delete the folder and all its contents.`
-                                : `This action cannot be undone.`
-                            : undefined
-                    }
-                    onCancel={() => setModal(null)}
-                    onConfirm={
-                        modal.mode === "delete"
-                            ? () => handleDelete(modal.node)
-                            : modal.mode === "newFile"
-                              ? (name) => handleNewFile(modal.node, name)
-                              : (name) => handleNewDir(modal.node, name)
-                    }
-                />
-            )}
+                {/* Context menu modal (delete confirm / new file/dir input) */}
+                {modal && (
+                    <ConfirmDialog
+                        open
+                        mode={modal.mode}
+                        title={
+                            modal.mode === "delete"
+                                ? `Delete "${modal.node.name}"?`
+                                : modal.mode === "newFile"
+                                    ? "New File"
+                                    : "New Folder"
+                        }
+                        message={
+                            modal.mode === "delete"
+                                ? modal.node.type === "dir"
+                                    ? `This will recursively delete the folder and all its contents.`
+                                    : `This action cannot be undone.`
+                                : undefined
+                        }
+                        onCancel={() => setModal(null)}
+                        onConfirm={
+                            modal.mode === "delete"
+                                ? () => handleDelete(modal.node)
+                                : modal.mode === "newFile"
+                                    ? (name) => handleNewFile(modal.node, name)
+                                    : (name) => handleNewDir(modal.node, name)
+                        }
+                    />
+                )}
             </div>
         </>
     );
@@ -495,16 +493,16 @@ export const SandboxTool = observer(function SandboxTool() {
  * which caused UI freezes when the tree re-renders (dozens of nodes).
  */
 function TreeContainer({
-    node,
-    expanded,
-    toggleDir,
-    onSelect,
-    selectedPath,
-    childrenByDir,
-    loadingByDir,
-    onContext,
-    workdir,
-}) {
+                           node,
+                           expanded,
+                           toggleDir,
+                           onSelect,
+                           selectedPath,
+                           childrenByDir,
+                           loadingByDir,
+                           onContext,
+                           workdir,
+                       }) {
     const [menu, setMenu] = useState(null); // {x, y, node} | null
     const [copied, setCopied] = useState(false);
 
@@ -533,12 +531,12 @@ function TreeContainer({
         const wrapper = e.target.closest("[data-path]");
         const targetNode = wrapper
             ? {
-                  path: wrapper.getAttribute("data-path"),
-                  type: wrapper.getAttribute("data-type"),
-                  name: wrapper.getAttribute("data-name"),
-              }
+                path: wrapper.getAttribute("data-path"),
+                type: wrapper.getAttribute("data-type"),
+                name: wrapper.getAttribute("data-name"),
+            }
             : null;
-        setMenu({ x: e.clientX, y: e.clientY, node: targetNode });
+        setMenu({x: e.clientX, y: e.clientY, node: targetNode});
     };
 
     // close on any click outside, ESC, or scroll
@@ -576,7 +574,7 @@ function TreeContainer({
                 createPortal(
                     <div
                         className="fixed z-[100] min-w-[160px] overflow-hidden rounded-md border border-border/80 bg-popover p-1 py-1.5 text-popover-foreground shadow-xl anim-rise"
-                        style={{ left: menu.x, top: menu.y }}
+                        style={{left: menu.x, top: menu.y}}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {isDir && (
@@ -603,7 +601,7 @@ function TreeContainer({
                                         setMenu(null);
                                     }}
                                 />
-                                <MenuDivider />
+                                <MenuDivider/>
                             </>
                         )}
                         {!menu.node && (
@@ -638,7 +636,7 @@ function TreeContainer({
                                         setMenu(null);
                                     }}
                                 />
-                                <MenuDivider />
+                                <MenuDivider/>
                             </>
                         )}
                         {menu.node && (
@@ -648,7 +646,7 @@ function TreeContainer({
                                     label={copied ? "Copied!" : "Copy Path"}
                                     onClick={handleCopyPath}
                                 />
-                                <MenuDivider />
+                                <MenuDivider/>
                                 <MenuItem
                                     icon={Trash2}
                                     label="Delete"
@@ -670,7 +668,7 @@ function TreeContainer({
     );
 }
 
-function MenuItem({ icon: Icon, label, onClick, danger }) {
+function MenuItem({icon: Icon, label, onClick, danger}) {
     return (
         <button
             onClick={onClick}
@@ -681,28 +679,28 @@ function MenuItem({ icon: Icon, label, onClick, danger }) {
                     : "text-popover-foreground hover:bg-foreground/8 hover:text-foreground"
             )}
         >
-            <Icon className="size-3.5" />
+            <Icon className="size-3.5"/>
             {label}
         </button>
     );
 }
 
 function MenuDivider() {
-    return <div className="my-1 h-px bg-border/60" />;
+    return <div className="my-1 h-px bg-border/60"/>;
 }
 
 // ─── Tree node (recursive, lazy) ─────────────────────────────────────────────
 
 function TreeNode({
-    node,
-    expanded,
-    toggleDir,
-    onSelect,
-    selectedPath,
-    depth,
-    childrenByDir,
-    loadingByDir,
-}) {
+                      node,
+                      expanded,
+                      toggleDir,
+                      onSelect,
+                      selectedPath,
+                      depth,
+                      childrenByDir,
+                      loadingByDir,
+                  }) {
     const isDir = node.type === "dir";
     const isOpen = expanded.has(node.path);
     const isLoading = loadingByDir.has(node.path);
@@ -729,27 +727,27 @@ function TreeNode({
                         ? "bg-accent/10 text-accent"
                         : "text-muted-foreground/90 hover:bg-sidebar/40 hover:text-foreground"
                 )}
-                style={{ paddingLeft: `${depth * 12 + 4}px` }}
+                style={{paddingLeft: `${depth * 12 + 4}px`}}
             >
                 {isDir ? (
                     <>
                         {isLoading ? (
-                            <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground/50" />
+                            <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground/50"/>
                         ) : isOpen ? (
-                            <ChevronDown className="size-3.5 shrink-0" />
+                            <ChevronDown className="size-3.5 shrink-0"/>
                         ) : (
-                            <ChevronRight className="size-3.5 shrink-0" />
+                            <ChevronRight className="size-3.5 shrink-0"/>
                         )}
                         {isOpen ? (
-                            <FolderOpen className="size-3.5 shrink-0 text-muted-foreground/60" />
+                            <FolderOpen className="size-3.5 shrink-0 text-muted-foreground/60"/>
                         ) : (
-                            <Folder className="size-3.5 shrink-0 text-muted-foreground/60" />
+                            <Folder className="size-3.5 shrink-0 text-muted-foreground/60"/>
                         )}
                     </>
                 ) : (
                     <>
-                        <span className="w-3 shrink-0" />
-                        <FileIcon name={node.name} />
+                        <span className="w-3 shrink-0"/>
+                        <FileIcon name={node.name}/>
                     </>
                 )}
                 <span className="truncate">{node.name}</span>
@@ -759,21 +757,21 @@ function TreeNode({
                 (isLoading
                     ? null
                     : (children || []).map((child) => (
-                          <TreeNode
-                              key={child.path || child.name}
-                              node={child}
-                              {...childProps}
-                              depth={depth + 1}
-                          />
-                      )))}
+                        <TreeNode
+                            key={child.path || child.name}
+                            node={child}
+                            {...childProps}
+                            depth={depth + 1}
+                        />
+                    )))}
         </div>
     );
 }
 
-function FileIcon({ name }) {
+function FileIcon({name}) {
     const ext = name.split(".").pop()?.toLowerCase();
     if (ext === "md")
-        return <FileText className="size-3.5 shrink-0 text-muted-foreground/60" />;
+        return <FileText className="size-3.5 shrink-0 text-muted-foreground/60"/>;
     if (
         [
             "py",
@@ -789,15 +787,15 @@ function FileIcon({ name }) {
         ].includes(ext)
     )
         return (
-            <FileCode className="size-3.5 shrink-0 text-muted-foreground/50" />
+            <FileCode className="size-3.5 shrink-0 text-muted-foreground/50"/>
         );
-    return <File className="size-3.5 shrink-0 text-muted-foreground/40" />;
+    return <File className="size-3.5 shrink-0 text-muted-foreground/40"/>;
 }
 
 // ─── File editor ────────────────────────────────────────────────────────────
 
-function FileEditor({ file, draft, setDraft }) {
-    const { isDark } = useTheme();
+function FileEditor({file, draft, setDraft}) {
+    const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
     if (file.file_type === "markdown") {
         return (
@@ -808,7 +806,7 @@ function FileEditor({ file, draft, setDraft }) {
                     height="100%"
                     preview="live"
                     data-color-mode={colorMode}
-                    style={{ height: "100%" }}
+                    style={{height: "100%"}}
                 />
             </div>
         );
@@ -834,30 +832,31 @@ function FileEditor({ file, draft, setDraft }) {
         return (
             <Highlight theme={isDark ? themes.vsDark : themes.vsLight} code={draft} language={lang}>
                 {({
-                    className,
-                    style,
-                    tokens,
-                    getLineProps,
-                    getTokenProps,
-                }) => (
+                      className,
+                      style,
+                      tokens,
+                      getLineProps,
+                      getTokenProps,
+                  }) => (
                     <pre
                         className={cn(
                             className,
                             "m-0 p-4 text-[13px] leading-relaxed"
                         )}
-                        style={{ ...style, background: "transparent" }}
+                        style={{...style, background: "transparent"}}
                     >
                         {tokens.map((line, i) => {
-                            const lineProps = getLineProps({ line });
+                            const lineProps = getLineProps({line});
                             return (
                                 <div key={i} {...lineProps}>
-                                    <span className="mr-3 inline-block w-8 select-none text-right text-muted-foreground/30">
+                                    <span
+                                        className="mr-3 inline-block w-8 select-none text-right text-muted-foreground/30">
                                         {i + 1}
                                     </span>
                                     {line.map((token, key) => (
                                         <span
                                             key={key}
-                                            {...getTokenProps({ token })}
+                                            {...getTokenProps({token})}
                                         />
                                     ))}
                                 </div>

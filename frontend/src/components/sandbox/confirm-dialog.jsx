@@ -1,13 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import {useEffect, useRef, useState} from "react";
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,} from "@/components/ui/dialog";
+import {cn} from "@/lib/utils";
+import {Loader2} from "lucide-react";
 
 /**
  * ConfirmDialog — a modal for Sandbox file operations.

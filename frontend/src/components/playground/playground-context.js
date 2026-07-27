@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react";
+import {createContext, useContext} from "react";
 
 /**
  * PlaygroundContext — bridges the shell's toolbar RIGHT slot to whatever tool

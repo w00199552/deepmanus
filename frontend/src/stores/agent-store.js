@@ -1,11 +1,6 @@
-import { makeAutoObservable, runInAction } from "mobx";
+import {makeAutoObservable, runInAction} from "mobx";
 
-import {
-    getAgent,
-    listAgents,
-    listSkills,
-    listTools,
-} from "@/services/agent-service";
+import {getAgent, listAgents, listSkills, listTools,} from "@/services/agent-service";
 
 const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
 
@@ -14,6 +9,7 @@ const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
  * Views call actions here, never services directly.
  */
 export class AgentStore {
+
     agents = [];
     tools = [];
     skills = [];
@@ -32,7 +28,7 @@ export class AgentStore {
     avatarLoading = false;
 
     _showToast(type, message) {
-        this.toast = { type, message };
+        this.toast = {type, message};
         setTimeout(() => {
             runInAction(() => {
                 this.toast = null;
@@ -150,7 +146,7 @@ export class AgentStore {
                 `${BACKEND}/agents/${encodeURIComponent(this.current.name)}`,
                 {
                     method: "PUT",
-                    headers: { "Content-Type": "application/json" },
+                    headers: {"Content-Type": "application/json"},
                     body: JSON.stringify({
                         prompt: this.promptDraft,
                         description: this.descriptionDraft,
@@ -176,11 +172,13 @@ export class AgentStore {
     /** Regenerate the current agent's avatar (DiceBear → save SVG). */
     async regenerateAvatar() {
         if (!this.current || this.avatarLoading) return;
-        runInAction(() => { this.avatarLoading = true; });
+        runInAction(() => {
+            this.avatarLoading = true;
+        });
         try {
             const res = await fetch(
                 `${BACKEND}/agents/${encodeURIComponent(this.current.name)}/avatar/regenerate`,
-                { method: "POST" }
+                {method: "POST"}
             );
             if (!res.ok) throw new Error(`regenerate failed: ${res.status}`);
             runInAction(() => {
@@ -190,7 +188,9 @@ export class AgentStore {
         } catch (e) {
             this._showToast("error", e.message || "头像生成失败");
         } finally {
-            runInAction(() => { this.avatarLoading = false; });
+            runInAction(() => {
+                this.avatarLoading = false;
+            });
         }
     }
 
@@ -200,7 +200,7 @@ export class AgentStore {
         try {
             const res = await fetch(`${BACKEND}/agents`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
                     name,
                     prompt,
@@ -230,7 +230,7 @@ export class AgentStore {
         try {
             const res = await fetch(
                 `${BACKEND}/agents/${encodeURIComponent(name)}`,
-                { method: "DELETE" }
+                {method: "DELETE"}
             );
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));

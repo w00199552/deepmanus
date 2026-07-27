@@ -1,8 +1,8 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import {StrictMode} from "react";
+import {createRoot} from "react-dom/client";
 
-import { AppProviders } from "@/providers";
-import { StoreProvider } from "@/hooks/use-store";
+import {AppProviders} from "@/providers";
+import {StoreProvider} from "@/hooks/use-store";
 import App from "./app.jsx";
 import "./index.css";
 
@@ -20,7 +20,7 @@ import "./index.css";
         const isDark =
             mode === "system"
                 ? window.matchMedia?.("(prefers-color-scheme: dark)").matches ??
-                  true
+                true
                 : mode === "dark";
         document.documentElement.classList.toggle("dark", isDark);
     } catch {
@@ -32,7 +32,7 @@ createRoot(document.getElementById("root")).render(
     <StrictMode>
         <AppProviders>
             <StoreProvider>
-                <App />
+                <App/>
             </StoreProvider>
         </AppProviders>
     </StrictMode>

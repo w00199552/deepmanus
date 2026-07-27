@@ -1,6 +1,4 @@
-import { Minus, Square, X, Copy } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import {Minus, Square, X} from "lucide-react";
 
 /**
  * WindowControls — macOS-style traffic light buttons (right side on Windows).

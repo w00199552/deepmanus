@@ -1,12 +1,12 @@
-import { observer } from "mobx-react-lite";
-import { useEffect } from "react";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import {observer} from "mobx-react-lite";
+import {useEffect} from "react";
+import {PanelRightClose} from "lucide-react";
 
-import { useStore } from "@/hooks/use-store";
-import { resetTopic } from "@/services/topic-service";
-import { ThreadView } from "@/components/chat/thread-view";
-import { ChatInput } from "@/components/chat/chat-input";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import {useStore} from "@/hooks/use-store";
+import {resetTopic} from "@/services/topic-service";
+import {ThreadView} from "@/components/chat/thread-view";
+import {ChatInput} from "@/components/chat/chat-input";
+import {TooltipProvider} from "@/components/ui/tooltip";
 
 /**
  * ChatPane — the middle column, driven by the multi-agent runtime.
@@ -17,8 +17,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
  * subscription; the runtime owns all streaming state, this component just
  * reads observables + forwards actions.
  */
-export const ChatPane = observer(function ChatPane({ onToggleCollapse }) {
-    const { topics, runtime } = useStore();
+export const ChatPane = observer(function ChatPane({onToggleCollapse}) {
+    const {topics, runtime} = useStore();
     const active = topics.active;
     const topicId = active?.id;
     const isTeam = active?.kind === "team";
@@ -33,7 +33,8 @@ export const ChatPane = observer(function ChatPane({ onToggleCollapse }) {
     /** "New chat" = reset the main topic's history (clear checkpoints + messages). */
     const handleNewChat = async () => {
         // 1. Backend: clear all checkpoints + sessions in this topic
-        await resetTopic(topicId).catch(() => {});
+        await resetTopic(topicId).catch(() => {
+        });
         // 2. Frontend: clear the topic's messages (keyed by topicId)
         runtime.clear(topicId);
     };
@@ -55,8 +56,8 @@ export const ChatPane = observer(function ChatPane({ onToggleCollapse }) {
                             ? active.kind === "subagent"
                                 ? (active.agents && active.agents[0]) || "agent"
                                 : active.kind === "team"
-                                  ? "Team"
-                                  : active.title || (active.id || "").slice(0, 12)
+                                    ? "Team"
+                                    : active.title || (active.id || "").slice(0, 12)
                             : "New conversation"}
                     </span>
                     {isTeam && (
@@ -72,7 +73,7 @@ export const ChatPane = observer(function ChatPane({ onToggleCollapse }) {
                         className="ml-1 rounded-md p-1 text-muted-foreground transition hover:bg-card hover:text-foreground"
                         title="Collapse chat"
                     >
-                        <PanelRightClose className="size-3.5" />
+                        <PanelRightClose className="size-3.5"/>
                     </button>
                 </div>
 

@@ -1,4 +1,4 @@
-import { TerminalSquare } from "lucide-react";
+import {TerminalSquare} from "lucide-react";
 
 /**
  * TerminalTool — placeholder for a future shell surface.
