@@ -436,6 +436,35 @@ async def get_topic_history(topic_id: str) -> dict:
     return {"topic_id": topic_id, "messages": all_messages}
 
 
+@topics_router.post("/{topic_id}/reset")
+async def reset_topic(topic_id: str) -> dict:
+    """Reset a topic's conversation history (clear all checkpoints + sessions).
+
+    Used by "new chat": clears all agent threads in this topic and deletes
+    all session rows, so the next message creates a fresh session with no
+    memory. The topic itself stays.
+    """
+    sessions = await session_store.list_in_topic(topic_id)
+    for s in sessions:
+        name = s.get("name")
+        if not name:
+            continue
+        thread_id = compute_thread_id(topic_id, name)
+        try:
+            agent, _ctx = await build_agent(s["id"])
+            try:
+                checkpointer = getattr(agent, "checkpointer", None)
+                if checkpointer is not None and hasattr(checkpointer, "adelete_thread"):
+                    await checkpointer.adelete_thread(thread_id)
+            finally:
+                await close_agent(agent)
+        except Exception:  # noqa: BLE001
+            pass
+    # Delete all session rows (next message will create fresh ones)
+    await session_store.delete_in_topic(topic_id)
+    return {"reset": topic_id}
+
+
 @topics_router.delete("/{topic_id}")
 async def delete_topic(topic_id: str) -> dict:
     """Delete a topic and ALL its data (cascading cleanup).

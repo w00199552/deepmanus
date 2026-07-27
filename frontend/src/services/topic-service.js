@@ -18,3 +18,12 @@ export async function deleteTopic(id) {
     if (!res.ok) throw new Error(`deleteTopic: ${res.status}`);
     return res.json();
 }
+
+/** Reset a topic's history (clear all checkpoints + sessions). Topic stays. */
+export async function resetTopic(id) {
+    const res = await fetch(`/topics/${encodeURIComponent(id)}/reset`, {
+        method: "POST",
+    });
+    if (!res.ok) throw new Error(`resetTopic: ${res.status}`);
+    return res.json();
+}
