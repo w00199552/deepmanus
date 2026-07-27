@@ -116,6 +116,7 @@ class AgentLoader:
                     "skills": raw.get("skills", []),
                     "sub_agents": raw.get("sub_agents", []),
                     "is_builtin": raw.get("is_builtin", False),
+                    "avatar": raw.get("avatar", ""),
                 }
                 self._configs[name] = cfg
                 logger.info("loaded agent: %s (tools=%s)", name, cfg["tools"])
@@ -206,6 +207,64 @@ class AgentLoader:
         )
         if name in self._configs:
             self._configs[name]["description"] = description
+
+    def save_avatar(self, name: str, seed: str) -> str:
+        """Generate a DiceBear avatar SVG and save it to the agent's directory.
+
+        Downloads from DiceBear HTTP API using the given seed, saves as
+        avatar.svg in ~/.openmanus/agents/{name}/. For built-in agents,
+        also saves to backend/seed/agents/{name}/avatar.svg.
+
+        Updates agent.yaml's 'avatar' field with the seed value.
+
+        Returns the seed used.
+        """
+        import httpx
+
+        d = self._agent_dir(name)
+        if not d.exists():
+            raise ValueError(f"agent directory not found: {d}")
+
+        # DiceBear adventurer style — same params as frontend avatarUrl
+        skin_tones = ["ffdfba", "f5d0b0"]
+        h = 0
+        for ch in seed:
+            h = (h * 31 + ord(ch)) & 0xFFFFFFFF
+        skin = skin_tones[h % len(skin_tones)]
+        url = (
+            f"https://api.dicebear.com/9.x/adventurer/svg"
+            f"?seed={seed}&backgroundColor=transparent&radius=50&skinColor={skin}"
+        )
+
+        resp = httpx.get(url, timeout=10.0)
+        resp.raise_for_status()
+        svg_content = resp.text
+
+        # Save to user directory
+        avatar_path = d / "avatar.svg"
+        avatar_path.write_text(svg_content, encoding="utf-8")
+
+        # Save to seed directory (for built-in agents)
+        seed_dir = _SEED_DIR / name
+        if seed_dir.exists():
+            (seed_dir / "avatar.svg").write_text(svg_content, encoding="utf-8")
+
+        # Update agent.yaml
+        yaml_path = d / "agent.yaml"
+        if yaml_path.exists():
+            raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                raw["avatar"] = seed
+                yaml_path.write_text(
+                    yaml.dump(raw, default_flow_style=False, allow_unicode=True),
+                    encoding="utf-8",
+                )
+
+        if name in self._configs:
+            self._configs[name]["avatar"] = seed
+
+        logger.info("saved avatar for agent %s (seed=%s)", name, seed)
+        return seed
 
     def create(self, name: str, prompt: str, tools: list[str], description: str = "") -> dict:
         name = name.strip()

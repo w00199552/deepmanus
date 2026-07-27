@@ -215,6 +215,21 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                 <div className="flex h-full w-full flex-col px-8 py-8">
                     {tab === "info" && (
                         <div className="space-y-4">
+                            {/* Avatar */}
+                            <div className="flex items-center gap-4">
+                                <Avatar
+                                    key={s.avatarVersion}
+                                    seed={s.current.name}
+                                    size={64}
+                                />
+                                <button
+                                    onClick={() => s.regenerateAvatar()}
+                                    className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-sidebar/30 px-3 py-2 text-[12px] text-muted-foreground transition hover:border-accent/40 hover:text-foreground"
+                                >
+                                    <Sparkles className="size-3.5" />
+                                    重新生成
+                                </button>
+                            </div>
                             <div>
                                 <label className="mb-1 block text-[12px] font-medium text-muted-foreground">
                                     Name

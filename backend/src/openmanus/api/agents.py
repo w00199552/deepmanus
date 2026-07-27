@@ -39,6 +39,7 @@ class AgentSummary(BaseModel):
     sub_agents: list[str] = []
     has_prompt: bool = False
     is_builtin: bool = False
+    avatar: str = ""
 
 
 class AgentDetail(BaseModel):
@@ -49,6 +50,7 @@ class AgentDetail(BaseModel):
     tools: list[str] = []
     skills: list[str] = []
     sub_agents: list[str] = []
+    avatar: str = ""
 
 
 class UpdateAgentBody(BaseModel):
@@ -118,6 +120,7 @@ async def list_agents() -> list[AgentSummary]:
             sub_agents=cfg.get("sub_agents", []),
             has_prompt=bool(cfg.get("prompt")),
             is_builtin=cfg.get("is_builtin", False),
+            avatar=cfg.get("avatar", ""),
         ))
     # sort: builtin first, then by name
     result.sort(key=lambda a: (not a.is_builtin, a.name))
@@ -164,7 +167,26 @@ async def get_agent(name: str) -> AgentDetail:
         tools=cfg.get("tools", []),
         skills=cfg.get("skills", []),
         sub_agents=cfg.get("sub_agents", []),
+        avatar=cfg.get("avatar", ""),
     )
+
+
+@router.post("/{name}/avatar/regenerate")
+async def regenerate_avatar(name: str) -> dict:
+    """Generate a new DiceBear avatar for an agent and save it as SVG.
+
+    Generates a random seed, downloads the SVG from DiceBear, saves to
+    ~/.openmanus/agents/{name}/avatar.svg (+ seed dir for built-in agents).
+    """
+    if not agent_loader.get(name):
+        raise HTTPException(status_code=404, detail="agent not found")
+    import uuid
+    seed = uuid.uuid4().hex[:12]
+    try:
+        agent_loader.save_avatar(name, seed)
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"avatar generation failed: {e}")
+    return {"ok": True, "avatar": seed}
 
 
 @router.post("")

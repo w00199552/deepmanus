@@ -28,6 +28,7 @@ export class AgentStore {
     descriptionDraft = "";
     toolDraft = new Set();
     skillDraft = new Set();
+    avatarVersion = 0; // bump to force avatar reload after regenerate
 
     _showToast(type, message) {
         this.toast = { type, message };
@@ -169,6 +170,24 @@ export class AgentStore {
         runInAction(() => {
             this.saving = false;
         });
+    }
+
+    /** Regenerate the current agent's avatar (DiceBear → save SVG). */
+    async regenerateAvatar() {
+        if (!this.current) return;
+        try {
+            const res = await fetch(
+                `${BACKEND}/agents/${encodeURIComponent(this.current.name)}/avatar/regenerate`,
+                { method: "POST" }
+            );
+            if (!res.ok) throw new Error(`regenerate failed: ${res.status}`);
+            runInAction(() => {
+                this.avatarVersion++; // force avatar img reload
+            });
+            this._showToast("success", "头像已重新生成");
+        } catch (e) {
+            this._showToast("error", e.message || "头像生成失败");
+        }
     }
 
     /** Create a new agent on disk. Returns true on success. */

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -38,18 +39,35 @@ function avatarUrl(seed) {
 }
 
 /**
- * A single avatar.
- * @param {string} seed  stable identity (session id / role name)
- * @param {number} [size=36] px
+ * Build the local avatar URL for an agent (saved avatar.svg).
+ * Returns null if agentName is falsy.
  */
-export function Avatar({ seed, size = 36, className }) {
+export function localAvatarUrl(agentName) {
+    if (!agentName) return null;
+    return `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
+}
+
+/**
+ * A single avatar.
+ * @param {string} seed  stable identity (agent name) — used for DiceBear fallback
+ * @param {number} [size=36] px
+ * @param {string} [src]  optional explicit image URL (overrides local lookup)
+ */
+export function Avatar({ seed, size = 36, className, src }) {
+    const [useFallback, setUseFallback] = useState(false);
+    const localSrc = src || localAvatarUrl(seed);
+    const imgSrc = (localSrc && !useFallback) ? localSrc : avatarUrl(seed);
+
     return (
         <img
-            src={avatarUrl(seed)}
+            src={imgSrc}
             alt=""
             width={size}
             height={size}
             loading="lazy"
+            onError={() => {
+                if (!useFallback && localSrc) setUseFallback(true);
+            }}
             className={cn(
                 "shrink-0 rounded-full bg-card/60 object-cover ring-1 ring-border",
                 className

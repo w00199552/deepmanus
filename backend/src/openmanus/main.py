@@ -103,6 +103,13 @@ def create_app() -> FastAPI:
     app.include_router(tools.router)
     app.include_router(files.router)
     app.include_router(workdir_router)
+
+    # Serve agent static assets (avatar.svg etc.) from ~/.openmanus/agents/
+    from fastapi.staticfiles import StaticFiles
+    from .agent_loader import AGENTS_DIR
+    AGENTS_DIR.mkdir(parents=True, exist_ok=True)
+    app.mount("/agent-assets", StaticFiles(directory=str(AGENTS_DIR)), name="agent-assets")
+
     return app
 
 
