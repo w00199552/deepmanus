@@ -368,3 +368,69 @@ async def list_topics() -> list[dict]:
             "preview": preview,
         })
     return result
+
+
+@topics_router.get("/{topic_id}/history")
+async def get_topic_history(topic_id: str) -> dict:
+    """Get merged message history for all sessions in a topic.
+
+    Loads each session's checkpointer history (via thread_id) and merges them
+    into a single timeline sorted by message order. This is what the frontend
+    renders when switching to a topic (replaces per-session history loading).
+    """
+    from ..agent_factory import build_agent, close_agent, compute_thread_id
+
+    sessions = await session_store.list_in_topic(topic_id)
+    all_messages = []
+
+    for s in sessions:
+        name = s.get("name")
+        if not name:
+            continue
+        thread_id = compute_thread_id(topic_id, name)
+        try:
+            agent, ctx = await build_agent(s["id"])
+            try:
+                snapshot = await agent.aget_state(
+                    {"configurable": {"thread_id": thread_id}}
+                )
+                msgs = (snapshot.values or {}).get("messages", [])
+                for msg in msgs:
+                    msg_type = getattr(msg, "type", "")
+                    content = getattr(msg, "content", "")
+                    msg_id = getattr(msg, "id", "") or ""
+
+                    if msg_type == "human":
+                        text = content if isinstance(content, str) else str(content)
+                        all_messages.append({
+                            "id": msg_id or f"u-{len(all_messages)}",
+                            "role": "user",
+                            "content": [{"type": "text", "text": text}],
+                            "speaker": "user",
+                            "session_id": s["id"],
+                            "agent_name": name,
+                        })
+                    elif msg_type == "ai":
+                        text = ""
+                        if isinstance(content, str):
+                            text = content
+                        elif isinstance(content, list):
+                            text = " ".join(
+                                b.get("text", "") for b in content
+                                if isinstance(b, dict) and b.get("type") == "text"
+                            )
+                        all_messages.append({
+                            "id": msg_id or f"a-{len(all_messages)}",
+                            "role": "assistant",
+                            "content": [{"type": "text", "text": text}] if text else [],
+                            "thinking": "",
+                            "speaker": f"agent:{name}",
+                            "session_id": s["id"],
+                            "agent_name": name,
+                        })
+            finally:
+                await close_agent(agent)
+        except Exception:
+            pass  # session has no history yet — skip
+
+    return {"topic_id": topic_id, "messages": all_messages}

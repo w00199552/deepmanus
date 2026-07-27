@@ -346,10 +346,9 @@ export class AgentRuntime {
         this._subHandle = null;
         if (!this.activeTopicId) return;
 
-        // History loading is intentionally a no-op for now — see JSDoc above.
-        // The bucket will populate from the live stream as events arrive.
+        // Load the topic's merged history (all sessions in the topic).
         if (loadHistory) {
-            // no-op: per-topic history endpoint not yet wired
+            this._loadTopicHistory(this.activeTopicId);
         }
 
         // open the subscription — always via topic fan-in (a single-agent topic
@@ -364,6 +363,20 @@ export class AgentRuntime {
                 /* EventSource auto-reconnects; surface nothing by default */
             },
         });
+    }
+
+    /** Load a topic's merged history into the message store. */
+    async _loadTopicHistory(topicId) {
+        try {
+            const res = await fetch(`/topics/${encodeURIComponent(topicId)}/history`);
+            if (!res.ok) return;
+            const data = await res.json();
+            runInAction(() => {
+                this.messageStore.set(topicId, data.messages || []);
+            });
+        } catch {
+            // history not available yet — bucket will fill from live stream
+        }
     }
 
     /** Last assistant text of a topic's bucket (for the list preview). */
