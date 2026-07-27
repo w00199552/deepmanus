@@ -37,7 +37,6 @@ from .agent_loader import agent_loader
 from .api import agents, files, sessions, skills, streams, tools
 from .api.topics import router as topics_router
 from .api.mailbox import router as mailbox_router
-from .api.workdir import router as workdir_router
 from .config import settings
 from .db import init_db, session_store, topic_store
 
@@ -105,7 +104,6 @@ def create_app() -> FastAPI:
     app.include_router(skills.router)
     app.include_router(tools.router)
     app.include_router(files.router)
-    app.include_router(workdir_router)
 
     # Serve agent static assets (avatar.svg etc.) from ~/.openmanus/agents/
     from fastapi.staticfiles import StaticFiles
