@@ -29,6 +29,7 @@ export class AgentStore {
     toolDraft = new Set();
     skillDraft = new Set();
     avatarVersion = 0; // bump to force avatar reload after regenerate
+    avatarLoading = false;
 
     _showToast(type, message) {
         this.toast = { type, message };
@@ -174,7 +175,8 @@ export class AgentStore {
 
     /** Regenerate the current agent's avatar (DiceBear → save SVG). */
     async regenerateAvatar() {
-        if (!this.current) return;
+        if (!this.current || this.avatarLoading) return;
+        runInAction(() => { this.avatarLoading = true; });
         try {
             const res = await fetch(
                 `${BACKEND}/agents/${encodeURIComponent(this.current.name)}/avatar/regenerate`,
@@ -187,6 +189,8 @@ export class AgentStore {
             this._showToast("success", "头像已重新生成");
         } catch (e) {
             this._showToast("error", e.message || "头像生成失败");
+        } finally {
+            runInAction(() => { this.avatarLoading = false; });
         }
     }
 

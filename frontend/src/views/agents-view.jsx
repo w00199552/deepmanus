@@ -224,10 +224,11 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                                 />
                                 <button
                                     onClick={() => s.regenerateAvatar()}
-                                    className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-sidebar/30 px-3 py-2 text-[12px] text-muted-foreground transition hover:border-accent/40 hover:text-foreground"
+                                    disabled={s.avatarLoading}
+                                    className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-sidebar/30 px-3 py-2 text-[12px] text-muted-foreground transition hover:border-accent/40 hover:text-foreground disabled:opacity-50"
                                 >
-                                    <Sparkles className="size-3.5" />
-                                    重新生成
+                                    <Sparkles className={cn("size-3.5", s.avatarLoading && "animate-spin")} />
+                                    {s.avatarLoading ? "生成中…" : "重新生成"}
                                 </button>
                             </div>
                             <div>
