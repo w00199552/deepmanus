@@ -220,6 +220,15 @@ async def _sse_byte_stream(
     if topic:
         async for raw in fan_in(topic_id=topic):
             yield raw
+        # Keep the SSE connection open after fan_in drains — EventSource
+        # auto-reconnects on close, which causes polling. Instead, sleep-loop
+        # until the client disconnects (asyncio.CancelledError on the generator
+        # when the HTTP connection drops).
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        except asyncio.CancelledError:
+            pass
         return
     if sessions:
         async for raw in drain_sessions(sessions):
