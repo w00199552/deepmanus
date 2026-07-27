@@ -40,11 +40,14 @@ function avatarUrl(seed) {
 
 /**
  * Build the local avatar URL for an agent (saved avatar.svg).
+ * @param {string} agentName
+ * @param {number} [version]  cache-busting version (bump to force reload)
  * Returns null if agentName is falsy.
  */
-export function localAvatarUrl(agentName) {
+export function localAvatarUrl(agentName, version) {
     if (!agentName) return null;
-    return `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
+    const base = `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
+    return version ? `${base}?v=${version}` : base;
 }
 
 /**
@@ -52,10 +55,11 @@ export function localAvatarUrl(agentName) {
  * @param {string} seed  stable identity (agent name) — used for DiceBear fallback
  * @param {number} [size=36] px
  * @param {string} [src]  optional explicit image URL (overrides local lookup)
+ * @param {number} [version]  cache-busting version for local avatar reload
  */
-export function Avatar({ seed, size = 36, className, src }) {
+export function Avatar({ seed, size = 36, className, src, version }) {
     const [useFallback, setUseFallback] = useState(false);
-    const localSrc = src || localAvatarUrl(seed);
+    const localSrc = src || localAvatarUrl(seed, version);
     const imgSrc = (localSrc && !useFallback) ? localSrc : avatarUrl(seed);
 
     return (

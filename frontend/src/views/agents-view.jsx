@@ -218,9 +218,9 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
                             {/* Avatar */}
                             <div className="flex items-center gap-4">
                                 <Avatar
-                                    key={s.avatarVersion}
                                     seed={s.current.name}
                                     size={64}
+                                    version={s.avatarVersion}
                                 />
                                 <button
                                     onClick={() => s.regenerateAvatar()}
