@@ -15,7 +15,7 @@ import {cn} from "@/lib/utils.js";
 const SkillDetail = ({name, onBack}) => {
     const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
-    const [tree, setTree] = useState(null);
+    const [treeData, setTreeData] = useState(null);
     const [file, setFile] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -23,7 +23,7 @@ const SkillDetail = ({name, onBack}) => {
         setLoading(true);
         getSkillTree(name)
             .then((data) => {
-                setTree(data);
+                setTreeData(data);
                 setLoading(false);
                 const skillMd = findFile(data, "SKILL.md");
                 if (skillMd) loadFile(skillMd.path);
@@ -70,9 +70,9 @@ const SkillDetail = ({name, onBack}) => {
                     </div>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
-                    {tree && (
+                    {treeData && (
                         <Tree
-                            data={tree}
+                            data={treeData}
                             selectedPath={file?.path}
                             onSelect={(node) => loadFile(node.path)}
                         />
