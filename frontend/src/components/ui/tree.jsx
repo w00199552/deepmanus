@@ -135,7 +135,7 @@ function TreeNode({
     checkedPaths,
     onCheck,
 }) {
-    const isDir = node.type === "dir" || (!node.isLeaf && (node.children || loadData));
+    const isDir = node.type === "dir" || (!node.isLeaf && (node.children?.length > 0 || !!loadData));
     const isOpen = expandedPaths.has(node.path);
     const isSelected = selectedPath === node.path;
     const isChecked = checkedPaths.has(node.path);
