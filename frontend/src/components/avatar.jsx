@@ -44,7 +44,7 @@ function avatarUrl(seed) {
  * @param {number} [version]  cache-busting version (bump to force reload)
  * Returns null if agentName is falsy or not a real agent name (e.g. "user-face").
  */
-const NON_AGENT_SEEDS = new Set(["user-face", "team", "unknown", "default"]);
+const NON_AGENT_SEEDS = new Set(["user-face", "team", "unknown", "default", "main"]);
 export function localAvatarUrl(agentName, version) {
     if (!agentName || NON_AGENT_SEEDS.has(agentName)) return null;
     const base = `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
@@ -144,8 +144,9 @@ export function SessionAvatar({ session, size = 36 }) {
         ];
         return <TeamAvatar seeds={members} size={size} />;
     }
-    // Seed by agent_name (stable identity): same agent = same face everywhere
-    // (topicList, message stream, agents page). Fallback to session.id if no name.
-    const seed = session.name || session.id || "unknown";
+    // Seed by agent name (stable identity): same agent = same face everywhere
+    // (topicList, message stream, agents page). Accept both `name` (session)
+    // and `agent_name` (topic) since the frontend mixes both object shapes.
+    const seed = session.name || session.agent_name || session.id || "unknown";
     return <Avatar seed={seed} size={size} />;
 }

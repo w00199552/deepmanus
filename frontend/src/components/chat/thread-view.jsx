@@ -320,10 +320,10 @@ function extractText(message) {
 function speakerSeed(speaker, session) {
     if (!session) return speaker || "Manus";
     if (session.kind === "team") return speaker || "team";
-    // Seed by agent_name (stable identity across sessions/refreshes).
     // Strip "agent:" prefix if present (speaker format from SSE events).
     if (speaker && speaker.startsWith("agent:")) return speaker.slice(6);
-    return session.name || speaker || session.id;
+    // Accept both `name` (session object) and `agent_name` (topic object).
+    return session.name || session.agent_name || speaker || session.id;
 }
 
 /** Display label for the speaker. */
