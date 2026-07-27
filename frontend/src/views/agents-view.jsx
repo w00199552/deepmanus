@@ -141,7 +141,7 @@ const AgentDetail = observer(function AgentDetail({ name, onBack }) {
 
                 <div className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                        <Avatar seed={s.current.name} size={36} />
+                        <Avatar seed={s.current.name} size={36} version={s.avatarVersion} />
                         <div>
                             <div className="text-sm font-medium">
                                 {s.current.name}
