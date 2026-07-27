@@ -2,11 +2,11 @@ import {observer} from "mobx-react-lite";
 import {useEffect, useState} from "react";
 import {Search, Trash2} from "lucide-react";
 
-import {useStore} from "@/hooks/use-store";
-import {TopicAvatar} from "@/components/avatar";
-import {ConfirmDialog} from "@/components/sandbox/confirm-dialog";
-import {formatListTime} from "@/utils/time";
-import {cn} from "@/lib/utils";
+import {useStore} from "@/hooks/use-store.jsx";
+import {TopicAvatar} from "@/components/avatar.jsx";
+import {ConfirmDialog} from "@/components/sandbox/confirm-dialog.jsx";
+import {formatListTime} from "@/utils/time.js";
+import {cn} from "@/lib/utils.js";
 
 /**
  * TopicList — left rail, shows topics (task/conversation groups).
