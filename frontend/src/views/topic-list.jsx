@@ -4,6 +4,7 @@ import { Search, Trash2 } from "lucide-react";
 
 import { useStore } from "@/hooks/use-store";
 import { SessionAvatar } from "@/components/avatar";
+import { ConfirmDialog } from "@/components/sandbox/confirm-dialog";
 import { formatListTime } from "@/utils/time";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,14 @@ export const TopicList = observer(function TopicList({
 }) {
     const { topics } = useStore();
     const [query, setQuery] = useState("");
+    const [deleteTarget, setDeleteTarget] = useState(null);
+
+    const handleConfirmDelete = async () => {
+        if (deleteTarget) {
+            await topics.remove(deleteTarget);
+        }
+        setDeleteTarget(null);
+    };
 
     useEffect(() => {
         topics.load();
@@ -134,7 +143,7 @@ export const TopicList = observer(function TopicList({
                                         unread={topics.unreadCount(t.id)}
                                         active={t.id === topics.activeTopicId}
                                         onSelect={() => topics.select(t.id)}
-                                        onDelete={() => topics.remove(t.id)}
+                                        onDelete={() => setDeleteTarget(t.id)}
                                     />
                                 ))}
                             </ul>
@@ -142,6 +151,16 @@ export const TopicList = observer(function TopicList({
                     </>
                 )}
             </div>
+
+            {/* Delete confirmation */}
+            <ConfirmDialog
+                open={!!deleteTarget}
+                mode="delete"
+                title="删除话题"
+                message="确定要删除这个话题吗？所有相关的会话、消息和文件将被清除。"
+                onCancel={() => setDeleteTarget(null)}
+                onConfirm={handleConfirmDelete}
+            />
         </div>
     );
 });
