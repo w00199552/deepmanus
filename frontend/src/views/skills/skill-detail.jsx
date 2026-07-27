@@ -10,7 +10,6 @@ import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 const SkillDetail = ({name, onBack}) => {
     const {skillStore: s} = useStore();
     const {isDark} = useTheme();
-    const colorMode = isDark ? "dark" : "light";
 
     useEffect(() => {
         s.loadSkillDetail(name);
@@ -62,7 +61,7 @@ const SkillDetail = ({name, onBack}) => {
                             </div>
                             <div
                                 className="min-h-0 flex-1 overflow-auto"
-                                data-color-mode={colorMode}
+                                data-color-mode={isDark ? "dark" : "light"}
                             >
                                 <FileContent file={s.detailFile} isDark={isDark}/>
                             </div>
@@ -83,15 +82,14 @@ export default SkillDetail;
 // ─── File content renderer ──────────────────────────────────────────────────
 
 function FileContent({file, isDark}) {
-    const colorMode = isDark ? "dark" : "light";
     if (file.file_type === "markdown") {
         return (
-            <div className="h-full" data-color-mode={colorMode}>
+            <div className="h-full" data-color-mode={isDark ? "dark" : "light"}>
                 <MDEditor
                     value={file.content}
                     height="100%"
                     preview="live"
-                    data-color-mode={colorMode}
+                    data-color-mode={isDark ? "dark" : "light"}
                     style={{height: "100%"}}
                 />
             </div>
