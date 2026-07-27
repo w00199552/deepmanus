@@ -329,7 +329,8 @@ function speakerSeed(speaker, session) {
 /** Display label for the speaker. */
 function speakerLabel(speaker, session) {
     if (speaker && speaker.startsWith("agent:")) return speaker.slice(6);
-    if (session?.kind === "subagent") return session.name || "agent";
+    // Accept both `name` (session) and `agent_name` (topic object).
+    if (session?.kind === "subagent") return session.name || session.agent_name || "agent";
     if (session?.kind === "team") return speaker || "team";
-    return speaker || "Manus";
+    return speaker || session?.agent_name || session?.name || "Manus";
 }
