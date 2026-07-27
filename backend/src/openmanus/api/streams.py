@@ -49,64 +49,6 @@ class PostMessage(BaseModel):
     target_agent: str | None = None  # @-mention target; None = topic's default agent
 
 
-class CdBody(BaseModel):
-    path: str = ""
-
-
-@router.post("/sessions/{session_id}/cd")
-async def cd_session(session_id: str, body: CdBody) -> dict:
-    """Switch a session's workdir. Does NOT trigger the agent — just updates
-    the sandbox root + rebuilds the agent with the new backend root_dir.
-
-    Behaves like a shell ``cd``:
-      ``cd <subdir>``  — relative to current workdir
-      ``cd ..``        — go up one level (stays at drive root if already there)
-      ``cd D:\\path``  — absolute path
-      ``cd``           — print current workdir (pwd)
-    """
-    s = await session_store.get(session_id)
-    if not s:
-        raise HTTPException(status_code=404, detail="session not found")
-
-    from pathlib import Path
-
-    cur = Path(s.get("workdir") or settings.workdir)
-    path = body.path.strip()
-
-    # cd with no args → print current workdir
-    if not path:
-        return {"ok": True, "workdir": str(cur), "action": "pwd"}
-
-    # Resolve: absolute stays absolute; relative joins current workdir
-    raw = Path(path).expanduser()
-    target = raw if raw.is_absolute() else cur / raw
-
-    # resolve() collapses ".." naturally; at a Windows drive root (D:\),
-    # going up keeps you at D:\ — exactly like cmd.
-    try:
-        target = target.resolve()
-    except (OSError, RuntimeError):
-        target = target.absolute()
-
-    if not target.exists() or not target.is_dir():
-        raise HTTPException(
-            status_code=400,
-            detail=f"path does not exist or not a directory: {path}",
-        )
-
-    # update session + global workdir.
-    # NOTE: we don't rebuild the agent here — post_message reads the session's
-    # workdir and rebuilds on the next message. This just updates the stored
-    # value so the next message picks it up.
-    await session_store.update(session_id, workdir=str(target))
-    settings.workdir = str(target)
-    # Propagate workdir to the session's topic (members of the topic inherit it).
-    if s.get("topic_id"):
-        await topic_store.update_workdir(s["topic_id"], str(target))
-
-    return {"ok": True, "workdir": str(target), "action": "cd"}
-
-
 @router.post("/sessions/{session_id}/messages")
 async def post_message(
     session_id: str, body: PostMessage, request: Request

@@ -54,9 +54,9 @@ export class SandboxStore {
      * Returns `{workdir, action}` so the caller can display a system message.
      * Throws on error.
      */
-    async cd(sessionId, path) {
+    async cd(topicId, path) {
         const res = await fetch(
-            `${BACKEND}/sessions/${encodeURIComponent(sessionId)}/cd`,
+            `${BACKEND}/topics/${encodeURIComponent(topicId)}/cd`,
             {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

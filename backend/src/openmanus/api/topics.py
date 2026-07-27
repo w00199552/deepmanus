@@ -11,9 +11,56 @@ from pydantic import BaseModel
 from typing import Any
 
 from ..agent_factory import build_agent, close_agent, compute_thread_id
+from ..config import settings
 from ..db import MAIN_TOPIC_ID, session_store, topic_store
 
 router = APIRouter(prefix="/topics", tags=["topics"])
+
+
+class CdBody(BaseModel):
+    path: str = ""
+
+
+@router.post("/{topic_id}/cd")
+async def cd_topic(topic_id: str, body: CdBody) -> dict:
+    """Switch a topic's workdir (shell-style cd).
+
+    Behaves like a shell ``cd``:
+      ``cd <subdir>``  — relative to current workdir
+      ``cd ..``        — go up one level (stays at drive root if already there)
+      ``cd D:\\path``  — absolute path
+      ``cd``           — print current workdir (pwd)
+    """
+    from pathlib import Path
+
+    topic = await topic_store.get(topic_id)
+    if not topic:
+        raise HTTPException(status_code=404, detail="topic not found")
+
+    cur = Path(topic.get("workdir") or settings.workdir)
+    path = body.path.strip()
+
+    if not path:
+        return {"ok": True, "workdir": str(cur), "action": "pwd"}
+
+    raw = Path(path).expanduser()
+    target = raw if raw.is_absolute() else cur / raw
+
+    try:
+        target = target.resolve()
+    except (OSError, RuntimeError):
+        target = target.absolute()
+
+    if not target.exists() or not target.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail=f"path does not exist or not a directory: {path}",
+        )
+
+    await topic_store.update_workdir(topic_id, str(target))
+    settings.workdir = str(target)
+
+    return {"ok": True, "workdir": str(target), "action": "cd"}
 
 
 class TopicSummary(BaseModel):

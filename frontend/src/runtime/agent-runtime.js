@@ -215,13 +215,9 @@ export class AgentRuntime {
             createdAt: Date.now(),
         });
 
-        // SandboxStore.cd still talks to /sessions/{session_id}/cd — resolve the
-        // topic's latest session id. If we can't, fall back to the topic id; the
-        // backend tolerates a missing path and the only consequence is no workdir
-        // switch, surfaced as a system error bubble.
-        const sessionId = this._topicStore?.active?.session_id || topicId;
+        // cd is now topic-level: POST /topics/{topic_id}/cd
         try {
-            const body = await this._sandboxStore.cd(sessionId, path);
+            const body = await this._sandboxStore.cd(topicId, path);
             const reply =
                 body.action === "pwd"
                     ? `📁 Current workdir: ${body.workdir}`
