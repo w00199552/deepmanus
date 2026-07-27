@@ -44,7 +44,7 @@ export function Tree({
 }) {
     const [expandedPaths, setExpandedPaths] = useState(() => {
         const dirs = new Set();
-        if (defaultExpandAll) collectDirs(data, dirs);
+        if (defaultExpandAll && data) collectDirs(data, dirs);
         return dirs;
     });
     const [checkedPaths, setCheckedPaths] = useState(new Set());
