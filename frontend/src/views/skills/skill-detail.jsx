@@ -1,48 +1,22 @@
-import {useCallback, useEffect, useState} from "react";
-import {
-    ChevronLeft,
-    Loader2,
-    Sparkles,
-} from "lucide-react";
+import {useEffect} from "react";
+import {ChevronLeft, Loader2, Sparkles} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 
+import {useStore} from "@/hooks/use-store.jsx";
 import {useTheme} from "@/hooks/use-theme.js";
-import {getSkillFile, getSkillTree} from "@/services/agent-service.js";
 import {Tree} from "@/components/ui/tree.jsx";
 import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 
 const SkillDetail = ({name, onBack}) => {
+    const {skillStore: s} = useStore();
     const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
-    const [treeData, setTreeData] = useState(null);
-    const [file, setFile] = useState(null);
-    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        setLoading(true);
-        getSkillTree(name)
-            .then((data) => {
-                setTreeData(data);
-                setLoading(false);
-                const skillMd = findFile(data, "SKILL.md");
-                if (skillMd) loadFile(skillMd.path);
-            })
-            .catch(() => setLoading(false));
-    }, [name]);
+        s.loadSkillDetail(name);
+    }, [name, s]);
 
-    const loadFile = useCallback(
-        async (path) => {
-            try {
-                const f = await getSkillFile(name, path);
-                setFile(f);
-            } catch {
-                /* ignore */
-            }
-        },
-        [name]
-    );
-
-    if (loading)
+    if (s.detailLoading)
         return (
             <Centered>
                 <Loader2 className="size-4 animate-spin"/> Loading…
@@ -70,9 +44,9 @@ const SkillDetail = ({name, onBack}) => {
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
                     <Tree
-                        data={treeData}
-                        selectedPath={file?.path}
-                        onSelect={(node) => loadFile(node.path)}
+                        data={s.detailTree}
+                        selectedPath={s.detailFile?.path}
+                        onSelect={(node) => s.loadSkillFile(name, node.path)}
                     />
                 </div>
             </div>
@@ -80,17 +54,17 @@ const SkillDetail = ({name, onBack}) => {
             {/* right: file content */}
             <div className="min-h-0 flex-1 overflow-hidden">
                 <div className="flex h-full flex-col">
-                    {file ? (
+                    {s.detailFile ? (
                         <>
                             <div
                                 className="shrink-0 border-b border-border/60 px-4 py-2 text-[12px] text-muted-foreground">
-                                {file.name}
+                                {s.detailFile.name}
                             </div>
                             <div
                                 className="min-h-0 flex-1 overflow-auto"
                                 data-color-mode={colorMode}
                             >
-                                <FileContent file={file}/>
+                                <FileContent file={s.detailFile} isDark={isDark}/>
                             </div>
                         </>
                     ) : (
@@ -108,8 +82,7 @@ export default SkillDetail;
 
 // ─── File content renderer ──────────────────────────────────────────────────
 
-function FileContent({file}) {
-    const {isDark} = useTheme();
+function FileContent({file, isDark}) {
     const colorMode = isDark ? "dark" : "light";
     if (file.file_type === "markdown") {
         return (
@@ -145,15 +118,6 @@ function FileContent({file}) {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function findFile(node, name) {
-    if (node.type === "file" && node.name === name) return node;
-    for (const child of node.children || []) {
-        const found = findFile(child, name);
-        if (found) return found;
-    }
-    return null;
-}
 
 function Centered({children}) {
     return (
