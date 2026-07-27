@@ -104,6 +104,15 @@ class WhiteboardStore:
             await db.commit()
             return cur.rowcount > 0
 
+    async def delete_in_topic(self, topic_id: str) -> int:
+        """Delete all whiteboard notes in a topic. Returns count deleted."""
+        async with aiosqlite.connect(_db_path()) as db:
+            cur = await db.execute(
+                "DELETE FROM whiteboard_note WHERE topic_id = ?", (topic_id,)
+            )
+            await db.commit()
+            return cur.rowcount
+
 
 # Module-level singleton.
 whiteboard_store = WhiteboardStore()

@@ -91,6 +91,17 @@ export class TopicStore {
         this._setActive(topicId);
     }
 
+    /** Delete a topic (cascading cleanup on backend). Switches to main if active. */
+    async remove(topicId) {
+        await topicApi.deleteTopic(topicId);
+        runInAction(() => {
+            this.topics = this.topics.filter((t) => t.id !== topicId);
+            if (this.activeTopicId === topicId) {
+                this._setActive(MAIN_TOPIC_ID);
+            }
+        });
+    }
+
     _setActive(topicId) {
         this.activeTopicId = topicId;
         localStorage.setItem(LS_KEY, topicId);

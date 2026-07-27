@@ -362,6 +362,15 @@ class SessionStore:
             await db.commit()
             return cur.rowcount > 0
 
+    async def delete_in_topic(self, topic_id: str) -> int:
+        """Delete all sessions in a topic. Returns count deleted."""
+        async with aiosqlite.connect(_db_path()) as db:
+            cur = await db.execute(
+                "DELETE FROM sessions WHERE topic_id = ?", (topic_id,)
+            )
+            await db.commit()
+            return cur.rowcount
+
 
 # Module-level singletons.
 topic_store = TopicStore()

@@ -112,6 +112,7 @@ export const TopicList = observer(function TopicList({
                                         unread={topics.unreadCount(t.id)}
                                         active={t.id === topics.activeTopicId}
                                         onSelect={() => topics.select(t.id)}
+                                        canDelete={false}
                                     />
                                 ))}
                             </ul>
@@ -133,6 +134,7 @@ export const TopicList = observer(function TopicList({
                                         unread={topics.unreadCount(t.id)}
                                         active={t.id === topics.activeTopicId}
                                         onSelect={() => topics.select(t.id)}
+                                        onDelete={() => topics.remove(t.id)}
                                     />
                                 ))}
                             </ul>
@@ -163,7 +165,7 @@ function Section({ title, children, empty, emptyHint }) {
     );
 }
 
-function TopicItem({ topic, unread, active, onSelect }) {
+function TopicItem({ topic, unread, active, onSelect, onDelete, canDelete = true }) {
     const isRunning = topic.status === "running";
     const preview = topic.preview || "";
 
@@ -218,6 +220,16 @@ function TopicItem({ topic, unread, active, onSelect }) {
                         )}
                     </div>
                 </div>
+
+                {canDelete && onDelete && (
+                    <Trash2
+                        className="size-3 shrink-0 self-center opacity-0 transition group-hover:opacity-60 hover:!opacity-100 hover:text-destructive"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete();
+                        }}
+                    />
+                )}
             </button>
         </li>
     );

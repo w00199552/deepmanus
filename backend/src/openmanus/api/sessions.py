@@ -434,3 +434,57 @@ async def get_topic_history(topic_id: str) -> dict:
             pass  # session has no history yet — skip
 
     return {"topic_id": topic_id, "messages": all_messages}
+
+
+@topics_router.delete("/{topic_id}")
+async def delete_topic(topic_id: str) -> dict:
+    """Delete a topic and ALL its data (cascading cleanup).
+
+    Deletion order (checkpoints must go before sessions rows, because
+    adelete_thread needs build_agent which reads the session row):
+
+    1. Reject 'main' (entry topic, cannot be deleted)
+    2. Load all sessions in the topic
+    3. For each session: build_agent → adelete_thread → close_agent
+       (deletes LangGraph checkpoints by thread_id)
+    4. Delete sessions rows (DELETE FROM sessions WHERE topic_id = ?)
+    5. Delete whiteboard notes (whiteboard_store.delete_in_topic)
+    6. Delete mailbox messages (mailbox_store.delete_in_topic)
+    7. Delete topic row (topic_store.delete)
+    """
+    from ..db import MAIN_TOPIC_ID
+    from ..whiteboard import whiteboard_store
+    from ..mailbox import mailbox_store
+
+    if topic_id == MAIN_TOPIC_ID:
+        raise HTTPException(status_code=403, detail="main topic cannot be deleted")
+
+    topic = await topic_store.get(topic_id)
+    if not topic:
+        raise HTTPException(status_code=404, detail="topic not found")
+
+    # Step 2-3: delete checkpoints (must be before session rows)
+    sessions = await session_store.list_in_topic(topic_id)
+    for s in sessions:
+        name = s.get("name")
+        if not name:
+            continue
+        thread_id = compute_thread_id(topic_id, name)
+        try:
+            agent, _ctx = await build_agent(s["id"])
+            try:
+                checkpointer = getattr(agent, "checkpointer", None)
+                if checkpointer is not None and hasattr(checkpointer, "adelete_thread"):
+                    await checkpointer.adelete_thread(thread_id)
+            finally:
+                await close_agent(agent)
+        except Exception:  # noqa: BLE001
+            pass  # checkpoint may not exist or agent build may fail — skip
+
+    # Step 4-7: delete rows (order doesn't matter among these)
+    await session_store.delete_in_topic(topic_id)
+    await whiteboard_store.delete_in_topic(topic_id)
+    await mailbox_store.delete_in_topic(topic_id)
+    await topic_store.delete(topic_id)
+
+    return {"deleted": topic_id}

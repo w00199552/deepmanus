@@ -226,6 +226,15 @@ class MailboxStore:
                     agent_name,
                 )
 
+    async def delete_in_topic(self, topic_id: str) -> int:
+        """Delete all mailbox messages in a topic. Returns count deleted."""
+        async with aiosqlite.connect(_db_path()) as db:
+            cur = await db.execute(
+                "DELETE FROM mailboxes WHERE topic_id = ?", (topic_id,)
+            )
+            await db.commit()
+            return cur.rowcount
+
 
 def _row_to_mailbox(row: aiosqlite.Row) -> dict[str, Any]:
     d = dict(row)
