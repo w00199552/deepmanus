@@ -216,8 +216,16 @@ export class AgentRuntime {
         });
 
         // cd is now topic-level: POST /topics/{topic_id}/cd
+        // Determine the topic's default agent for the reply speaker:
+        // team → TeamLeader, main → Manus, otherwise the first agent in the topic.
         const topic = this._topicStore?.active;
-        const agentName = topic?.agent_name || "Manus";
+        const agents = topic?.agents || [];
+        let agentName = "Manus";
+        if (topic?.kind === "team" || agents.includes("TeamLeader")) {
+            agentName = "TeamLeader";
+        } else if (agents.length > 0) {
+            agentName = agents[0];
+        }
         try {
             const body = await this._sandboxStore.cd(topicId, path);
             const reply =
