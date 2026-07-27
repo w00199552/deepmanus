@@ -25,7 +25,7 @@ from langgraph.graph.state import CompiledStateGraph
 from .agent_loader import agent_loader
 from .chat_model import ChatGLM
 from .config import settings
-from .db import session_store
+from .db import session_store, topic_store
 from .middleware.agent_trace import AgentTraceMiddleware
 from .middleware.tool_guard import ToolGuardMiddleware
 from .store import get_checkpointer
@@ -302,8 +302,11 @@ async def build_agent(session_id: str) -> tuple[CompiledStateGraph, AgentContext
     name = s.get("name")
     if not name:
         name = "TeamLeader" if s.get("kind") == "team" else "Manus"
-    workdir = s.get("workdir") or settings.workdir
     topic_id = s.get("topic_id") or "main"
+    # Workdir is a TOPIC-level property (cd updates the topic, not the session).
+    # Read from topic to always get the latest — sessions may have a stale value.
+    topic = await topic_store.get(topic_id)
+    workdir = (topic or {}).get("workdir") or s.get("workdir") or settings.workdir
     ctx = AgentContext(
         session_id=session_id,
         topic_id=topic_id,
