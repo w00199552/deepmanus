@@ -42,10 +42,11 @@ function avatarUrl(seed) {
  * Build the local avatar URL for an agent (saved avatar.svg).
  * @param {string} agentName
  * @param {number} [version]  cache-busting version (bump to force reload)
- * Returns null if agentName is falsy.
+ * Returns null if agentName is falsy or not a real agent name (e.g. "user-face").
  */
+const NON_AGENT_SEEDS = new Set(["user-face", "team", "unknown", "default"]);
 export function localAvatarUrl(agentName, version) {
-    if (!agentName) return null;
+    if (!agentName || NON_AGENT_SEEDS.has(agentName)) return null;
     const base = `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
     return version ? `${base}?v=${version}` : base;
 }
