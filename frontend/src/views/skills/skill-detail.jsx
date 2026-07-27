@@ -1,13 +1,6 @@
 import {useCallback, useEffect, useState} from "react";
 import {
-    ChevronDown,
     ChevronLeft,
-    ChevronRight,
-    File,
-    FileCode,
-    FileText,
-    Folder,
-    FolderOpen,
     Loader2,
     Sparkles,
 } from "lucide-react";
@@ -16,6 +9,7 @@ import {Highlight, themes} from "prism-react-renderer";
 
 import {useTheme} from "@/hooks/use-theme.js";
 import {getSkillFile, getSkillTree} from "@/services/agent-service.js";
+import {Tree} from "@/components/ui/tree.jsx";
 import {cn} from "@/lib/utils.js";
 
 const SkillDetail = ({name, onBack}) => {
@@ -24,16 +18,12 @@ const SkillDetail = ({name, onBack}) => {
     const [tree, setTree] = useState(null);
     const [file, setFile] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [expanded, setExpanded] = useState(new Set());
 
     useEffect(() => {
         setLoading(true);
         getSkillTree(name)
             .then((data) => {
                 setTree(data);
-                const dirs = new Set();
-                collectDirs(data, dirs);
-                setExpanded(dirs);
                 setLoading(false);
                 const skillMd = findFile(data, "SKILL.md");
                 if (skillMd) loadFile(skillMd.path);
@@ -52,15 +42,6 @@ const SkillDetail = ({name, onBack}) => {
         },
         [name]
     );
-
-    const toggleDir = (path) => {
-        setExpanded((prev) => {
-            const next = new Set(prev);
-            if (next.has(path)) next.delete(path);
-            else next.add(path);
-            return next;
-        });
-    };
 
     if (loading)
         return (
@@ -90,13 +71,10 @@ const SkillDetail = ({name, onBack}) => {
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
                     {tree && (
-                        <TreeNode
-                            node={tree}
-                            expanded={expanded}
-                            toggleDir={toggleDir}
-                            onSelect={loadFile}
+                        <Tree
+                            data={tree}
                             selectedPath={file?.path}
-                            depth={0}
+                            onSelect={(node) => loadFile(node.path)}
                         />
                     )}
                 </div>
@@ -130,105 +108,6 @@ const SkillDetail = ({name, onBack}) => {
 }
 
 export default SkillDetail;
-
-// ─── Tree node (recursive) ──────────────────────────────────────────────────
-
-function TreeNode({
-                      node,
-                      expanded,
-                      toggleDir,
-                      onSelect,
-                      selectedPath,
-                      depth,
-                  }) {
-    const isDir = node.type === "dir";
-    const isOpen = expanded.has(node.path);
-
-    if (depth === 0 && isDir) {
-        return (
-            <div>
-                {node.children.map((child) => (
-                    <TreeNode
-                        key={child.path || child.name}
-                        node={child}
-                        expanded={expanded}
-                        toggleDir={toggleDir}
-                        onSelect={onSelect}
-                        selectedPath={selectedPath}
-                        depth={1}
-                    />
-                ))}
-            </div>
-        );
-    }
-
-    return (
-        <div>
-            <button
-                onClick={() =>
-                    isDir ? toggleDir(node.path) : onSelect(node.path)
-                }
-                className={cn(
-                    "flex w-full items-center gap-1 rounded-md px-2 py-1 text-[12px] transition",
-                    !isDir && selectedPath === node.path
-                        ? "bg-accent/10 text-accent"
-                        : "text-muted-foreground hover:bg-sidebar/40 hover:text-foreground"
-                )}
-                style={{paddingLeft: `${depth * 12 + 8}px`}}
-            >
-                {isDir ? (
-                    <>
-                        {isOpen ? (
-                            <ChevronDown className="size-3 shrink-0"/>
-                        ) : (
-                            <ChevronRight className="size-3 shrink-0"/>
-                        )}
-                        {isOpen ? (
-                            <FolderOpen className="size-3.5 shrink-0 text-muted-foreground/60"/>
-                        ) : (
-                            <Folder className="size-3.5 shrink-0 text-muted-foreground/60"/>
-                        )}
-                    </>
-                ) : (
-                    <>
-                        <span className="w-3 shrink-0"/>
-                        <FileIcon name={node.name}/>
-                    </>
-                )}
-                <span className="truncate">{node.name}</span>
-            </button>
-            {isDir &&
-                isOpen &&
-                node.children.map((child) => (
-                    <TreeNode
-                        key={child.path || child.name}
-                        node={child}
-                        expanded={expanded}
-                        toggleDir={toggleDir}
-                        onSelect={onSelect}
-                        selectedPath={selectedPath}
-                        depth={depth + 1}
-                    />
-                ))}
-        </div>
-    );
-}
-
-function FileIcon({name}) {
-    const ext = name.split(".").pop()?.toLowerCase();
-    if (ext === "md")
-        return <FileText className="size-3.5 shrink-0 text-muted-foreground/60"/>;
-    if (
-        [
-            "py", "js", "jsx", "ts", "tsx", "sh",
-            "json", "yaml", "yml", "css",
-        ].includes(ext)
-    )
-        return (
-            <FileCode className="size-3.5 shrink-0 text-muted-foreground/50"/>
-        );
-    return <File className="size-3.5 shrink-0 text-muted-foreground/40"/>;
-}
 
 // ─── File content renderer ──────────────────────────────────────────────────
 
@@ -297,13 +176,6 @@ function FileContent({file}) {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function collectDirs(node, dirs) {
-    if (node.type === "dir") {
-        dirs.add(node.path);
-        for (const child of node.children || []) collectDirs(child, dirs);
-    }
-}
 
 function findFile(node, name) {
     if (node.type === "file" && node.name === name) return node;
