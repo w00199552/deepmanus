@@ -216,6 +216,8 @@ export class AgentRuntime {
         });
 
         // cd is now topic-level: POST /topics/{topic_id}/cd
+        const topic = this._topicStore?.active;
+        const agentName = topic?.agent_name || "Manus";
         try {
             const body = await this._sandboxStore.cd(topicId, path);
             const reply =
@@ -225,7 +227,7 @@ export class AgentRuntime {
             this.messageStore.appendMessage(topicId, {
                 id: `cd-${Date.now()}`,
                 role: "assistant",
-                speaker: "system",
+                speaker: `agent:${agentName}`,
                 content: [{ type: "text", text: reply }],
                 status: "complete",
                 createdAt: Date.now(),
@@ -234,7 +236,7 @@ export class AgentRuntime {
             this.messageStore.appendMessage(topicId, {
                 id: `cd-err-${Date.now()}`,
                 role: "assistant",
-                speaker: "system",
+                speaker: `agent:${agentName}`,
                 content: [{ type: "text", text: `❌ ${e.message}` }],
                 status: "complete",
                 createdAt: Date.now(),
