@@ -95,14 +95,13 @@ export function Avatar({ seed, size = 36, className, src, version }) {
  */
 export function TeamAvatar({ seeds, size = 36 }) {
     const list = (seeds && seeds.length ? seeds : ["team"]).slice(0, 4);
-    const mini = Math.round(size * 0.42); // mini avatar size inside the badge
+    const mini = Math.round(size * 0.42);
 
     return (
         <div
             className="relative flex shrink-0 items-center justify-center rounded-xl bg-sidebar ring-1 ring-border"
             style={{ width: size, height: size }}
         >
-            {/* up to 4 mini faces in a 2x2 grid inside the badge */}
             <div
                 className="grid place-items-center"
                 style={{
@@ -111,20 +110,45 @@ export function TeamAvatar({ seeds, size = 36 }) {
                 }}
             >
                 {list.slice(0, 4).map((seed, i) => (
-                    <img
-                        key={i}
-                        src={avatarUrl(seed)}
-                        alt=""
-                        width={mini}
-                        height={mini}
-                        loading="lazy"
-                        className="rounded-full bg-card object-cover ring-1 ring-card"
-                        style={{ width: mini, height: mini }}
-                    />
+                    <MiniAvatar key={i} seed={seed} size={mini} />
                 ))}
             </div>
         </div>
     );
+}
+
+/** A mini avatar inside TeamAvatar — supports local SVG + DiceBear fallback. */
+function MiniAvatar({ seed, size }) {
+    const [useFallback, setUseFallback] = useState(false);
+    const localSrc = localAvatarUrl(seed);
+    const imgSrc = (localSrc && !useFallback) ? localSrc : avatarUrl(seed);
+    return (
+        <img
+            src={imgSrc}
+            alt=""
+            width={size}
+            height={size}
+            loading="lazy"
+            onError={() => { if (!useFallback && localSrc) setUseFallback(true); }}
+            className="rounded-full bg-card object-cover ring-1 ring-card"
+            style={{ width: size, height: size }}
+        />
+    );
+}
+
+/**
+ * Topic avatar: renders based on the topic's agent roster.
+ * - 1 agent → single Avatar
+ * - 2+ agents → TeamAvatar (up to 4 mini faces)
+ * @param {string[]} agents  agent names in this topic
+ * @param {number} [size=36]
+ */
+export function TopicAvatar({ agents, size = 36 }) {
+    const list = (agents && agents.length > 0) ? agents : ["unknown"];
+    if (list.length === 1) {
+        return <Avatar seed={list[0]} size={size} />;
+    }
+    return <TeamAvatar seeds={list} size={size} />;
 }
 
 /**

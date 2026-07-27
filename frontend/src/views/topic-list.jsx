@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
 
 import { useStore } from "@/hooks/use-store";
-import { SessionAvatar } from "@/components/avatar";
+import { TopicAvatar } from "@/components/avatar";
 import { ConfirmDialog } from "@/components/sandbox/confirm-dialog";
 import { formatListTime } from "@/utils/time";
 import { cn } from "@/lib/utils";
@@ -50,7 +50,7 @@ export const TopicList = observer(function TopicList({
                         className="relative shrink-0 rounded-lg p-1 transition hover:bg-sidebar/40"
                         title={t.title || t.agent_name || t.id.slice(0, 12)}
                     >
-                        <TopicAvatar topic={t} size={32} />
+                        <TopicAvatar agents={t.agents} size={32} />
                         {t.id === topics.activeTopicId && (
                             <span className="absolute -left-0.5 top-1/2 h-6 w-1 -translate-y-1/2 rounded-full bg-accent" />
                         )}
@@ -204,7 +204,7 @@ function TopicItem({ topic, unread, active, onSelect, onDelete, canDelete = true
                 )}
 
                 <div className="relative mt-0.5">
-                    <TopicAvatar topic={topic} size={36} />
+                    <TopicAvatar agents={topic.agents} size={36} />
                     {isRunning && (
                         <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-accent ring-2 ring-card animate-pulse-dot" />
                     )}
@@ -254,19 +254,4 @@ function TopicItem({ topic, unread, active, onSelect, onDelete, canDelete = true
     );
 }
 
-/** Render an avatar for a topic (uses agent_name for DiceBear seed). */
-function TopicAvatar({ topic, size = 36 }) {
-    // Reuse SessionAvatar by mapping topic → session-like object.
-    // SessionAvatar reads kind + name/members for the avatar style.
-    return (
-        <SessionAvatar
-            session={{
-                id: topic.session_id || topic.id,
-                kind: topic.kind,
-                name: topic.agent_name,
-                metadata: {},
-            }}
-            size={size}
-        />
-    );
-}
+// TopicAvatar is now imported from @/components/avatar (supports multi-agent team avatars).

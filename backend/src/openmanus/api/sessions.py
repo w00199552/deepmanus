@@ -341,6 +341,7 @@ class TopicSummary(BaseModel):
     kind: str = "root"                # the (latest) session kind
     status: str = "active"            # the (latest) session status
     preview: str | None = None        # last message preview (from metadata)
+    agents: list[str] = []            # all agent names in this topic (deduped, for avatars)
 
 
 @topics_router.get("", response_model=list[TopicSummary])
@@ -355,6 +356,14 @@ async def list_topics() -> list[dict]:
         preview = None
         if latest and latest.get("metadata"):
             preview = (latest["metadata"] or {}).get("preview")
+        # Extract unique agent names for avatar rendering
+        agent_names = list(dict.fromkeys(
+            s["name"] for s in sessions if s.get("name")
+        ))
+        # main topic with no sessions yet → default to Manus
+        if not agent_names and t["id"] == "main":
+            agent_names = ["Manus"]
+
         result.append({
             "id": t["id"],
             "title": t.get("title"),
@@ -366,6 +375,7 @@ async def list_topics() -> list[dict]:
             "kind": (latest or {}).get("kind", "root"),
             "status": (latest or {}).get("status", "active"),
             "preview": preview,
+            "agents": agent_names,
         })
     return result
 
