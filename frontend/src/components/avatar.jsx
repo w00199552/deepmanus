@@ -121,12 +121,8 @@ export function SessionAvatar({ session, size = 36 }) {
         ];
         return <TeamAvatar seeds={members} size={size} />;
     }
-    // root + subagent: single face. Each session gets its OWN face via its id,
-    // so every dispatched Coder/Researcher is a different person — but a given
-    // session keeps the same face across refreshes (stable identity).
-    // The default entry ("Manus") uses a dedicated seed so it has a distinct,
-    // fixed face (its id is the constant "default", which would otherwise lock
-    // it to one arbitrary face forever).
-    const seed = session.id === "manus" ? "manus-open" : session.id;
+    // Seed by agent_name (stable identity): same agent = same face everywhere
+    // (topicList, message stream, agents page). Fallback to session.id if no name.
+    const seed = session.name || session.id || "unknown";
     return <Avatar seed={seed} size={size} />;
 }

@@ -101,7 +101,7 @@ function UserMessage({ message, session }) {
     const text = extractText(message);
     const isDelegated = session?.kind === "subagent";
     const label = isDelegated ? "Manus" : "you";
-    const avatarSeed = isDelegated ? "manus-open" : "user-face";
+    const avatarSeed = isDelegated ? "Manus" : "user-face";
     return (
         <div className="anim-rise mb-5 flex justify-end gap-3">
             <div className="min-w-0 max-w-[80%]">
@@ -318,10 +318,12 @@ function extractText(message) {
  *    list to stay consistent with.)
  */
 function speakerSeed(speaker, session) {
-    if (!session) return speaker || "manus-open";
+    if (!session) return speaker || "Manus";
     if (session.kind === "team") return speaker || "team";
-    if (session.id === "manus") return "manus-open";
-    return session.id;
+    // Seed by agent_name (stable identity across sessions/refreshes).
+    // Strip "agent:" prefix if present (speaker format from SSE events).
+    if (speaker && speaker.startsWith("agent:")) return speaker.slice(6);
+    return session.name || speaker || session.id;
 }
 
 /** Display label for the speaker. */
