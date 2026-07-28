@@ -38,22 +38,26 @@ export class SkillStore {
     }
 
     async loadSkillDetail(name) {
-        this.detailName = name;
-        this.detailLoading = true;
-        this.detailTree = null;
-        this.detailFile = null;
+        runInAction(() => {
+            this.detailName = name;
+            this.detailLoading = true;
+            this.detailTree = null;
+            this.detailFile = null;
+        });
         try {
             const tree = await getSkillTree(name);
+            // Guard: if user switched to another skill while loading, discard.
+            if (this.detailName !== name) return;
             runInAction(() => {
                 this.detailTree = tree;
                 this.detailLoading = false;
             });
-            // Auto-select SKILL.md
             const skillMd = this._findFile(tree, "SKILL.md");
             if (skillMd) {
                 await this.loadSkillFile(name, skillMd.path);
             }
         } catch {
+            if (this.detailName !== name) return;
             runInAction(() => {
                 this.detailLoading = false;
             });

@@ -90,7 +90,7 @@ export function Tree({
         [onCheck]
     );
 
-    if (!data) return null;
+    if (!data) return <div className="p-2 text-[12px] text-muted-foreground/40">No data</div>;
 
     // Root renders its children directly (no indent for the root container).
     if (data.type === "dir" && data.children) {
