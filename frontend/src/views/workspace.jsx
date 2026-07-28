@@ -5,7 +5,7 @@ import {TopNav} from "@/components/top-nav";
 import {TopicList} from "@/views/chat/topic/topic-list.jsx";
 import {ChatPane} from "@/views/chat/topic/chat-pane.jsx";
 import {PlaygroundShell} from "@/components/playground/playground-shell";
-import {AgentsView} from "@/views/agents/agents-view.jsx";
+import AgentsView from "@/views/agents/agents-view.jsx";
 import SkillsView from "@/views/skills/skills-view.jsx";
 import ToolsView from "@/views/tools/tools-view.jsx";
 
