@@ -7,7 +7,7 @@ import {ChatPane} from "@/views/chat/topic/chat-pane.jsx";
 import {PlaygroundShell} from "@/components/playground/playground-shell";
 import {AgentsView} from "@/views/agents/agents-view.jsx";
 import SkillsView from "@/views/skills/skills-view.jsx";
-import {ToolsView} from "@/views/tools/tools-view.jsx";
+import ToolsView from "@/views/tools/tools-view.jsx";
 
 // localStorage keys for persisted panel layouts (survive session switches).
 const LAYOUT_LEFT = "openmanus.layout.left"; // list | chat  (inside left half)
