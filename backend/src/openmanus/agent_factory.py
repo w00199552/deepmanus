@@ -66,8 +66,8 @@ def _build_model() -> BaseChatModel:
     provider = settings.model_provider.lower()
     import httpx
 
-    sync_http = httpx.Client(verify=settings.ssl_verify)
-    async_http = httpx.AsyncClient(verify=settings.ssl_verify)
+    sync_http = httpx.Client(verify=settings.ssl_verify, trust_env=False)
+    async_http = httpx.AsyncClient(verify=settings.ssl_verify, trust_env=False)
 
     if provider == "anthropic":
         return ChatAnthropic(
