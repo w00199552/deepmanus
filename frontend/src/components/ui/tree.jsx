@@ -49,7 +49,7 @@ export function Tree({
     });
     const [checkedPaths, setCheckedPaths] = useState(new Set());
 
-    // Reset expanded set when data changes (e.g. switching skills).
+    // Reset expanded set when data changes.
     useEffect(() => {
         if (!data) return;
         const dirs = new Set();
