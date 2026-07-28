@@ -14,19 +14,19 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
-
 from deepagents import create_deep_agent
 from deepagents.backends import LocalShellBackend
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
+from typing import Any
 
 from .agent_loader import agent_loader
 from .chat_model import ChatGLM
 from .config import settings
 from .db import session_store, topic_store
 from .middleware.agent_trace import AgentTraceMiddleware
+from .middleware.retry import build_retry_middlewares
 from .middleware.tool_guard import ToolGuardMiddleware
 from .store import get_checkpointer
 from .tool_loader import tool_loader
@@ -359,7 +359,13 @@ async def build_agent(session_id: str) -> tuple[CompiledStateGraph, AgentContext
         backend=backend,
         checkpointer=own_checkpointer,
         skills=skill_paths if skill_paths else None,
+        # Middleware order: retry OUTERMOST. langchain middlewares wrap
+        # onion-style — the FIRST in the list is the OUTERMOST wrapper, so a
+        # transient 429/timeout is retried transparently BEFORE reaching the
+        # guard (which would otherwise record the failed tool call) or the
+        # trace (which should log the final settled result, not every blip).
         middleware=[
+            *build_retry_middlewares(settings),
             ToolGuardMiddleware(excluded=excluded),
             AgentTraceMiddleware(name=name),
         ],
