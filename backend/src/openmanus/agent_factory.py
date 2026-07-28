@@ -335,7 +335,7 @@ async def build_agent(session_id: str) -> tuple[CompiledStateGraph, AgentContext
     # else to the working directory (read-write).
     from deepagents.backends.composite import CompositeBackend
     from .readonly_backend import ReadOnlyFilesystemBackend
-    from .skill_loader import skill_loader, SKILLS_DIR
+    from .skill_loader import SKILLS_DIR
 
     default_backend = _build_backend(workdir)
     routes = {}
@@ -345,12 +345,13 @@ async def build_agent(session_id: str) -> tuple[CompiledStateGraph, AgentContext
         routes["/skills/"] = ReadOnlyFilesystemBackend(root_dir=str(SKILLS_DIR))
     backend = CompositeBackend(default=default_backend, routes=routes) if routes else default_backend
 
-    # Build skill paths for SkillsMiddleware (absolute paths to skill dirs).
-    skill_paths = []
-    for sname in skill_names:
-        sdir = skill_loader.skill_dir(sname)
-        if sdir:
-            skill_paths.append(str(sdir))
+    # Build skill source paths for SkillsMiddleware. These MUST be VIRTUAL
+    # paths under the /skills/ route above — passing absolute host paths
+    # (e.g. C:\Users\me\.openmanus\skills\<name>) makes CompositeBackend fall
+    # through to the default workdir-sandboxed backend, which rejects them
+    # with "Path ... outside root directory". Each configured skill gets its
+    # own virtual source so only the agent's declared skills are exposed.
+    skill_paths = [f"/skills/{sname}/" for sname in skill_names] if skill_names else []
 
     agent = create_deep_agent(
         model=_default_model,
