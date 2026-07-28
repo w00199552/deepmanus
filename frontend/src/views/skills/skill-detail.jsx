@@ -1,4 +1,5 @@
 import {useEffect} from "react";
+import {observer} from "mobx-react-lite";
 import {ChevronLeft, Loader2, Sparkles} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 
@@ -7,12 +8,12 @@ import {useTheme} from "@/hooks/use-theme.js";
 import {Tree} from "@/components/ui/tree.jsx";
 import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 
-const SkillDetail = ({name, onBack}) => {
+const SkillDetail = observer(({name, onBack}) => {
     const {skillStore: s} = useStore();
     const {isDark} = useTheme();
 
     useEffect(() => {
-        s.loadSkillDetail(name);
+        s.loadSkillDetail(name).then();
     }, [name, s]);
 
     if (s.detailLoading)
@@ -75,12 +76,11 @@ const SkillDetail = ({name, onBack}) => {
             </div>
         </div>
     );
-}
+});
 
 export default SkillDetail;
 
 // ─── File content renderer ──────────────────────────────────────────────────
-
 function FileContent({file, isDark}) {
     if (file.file_type === "markdown") {
         return (
@@ -116,7 +116,6 @@ function FileContent({file, isDark}) {
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
 function Centered({children}) {
     return (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
