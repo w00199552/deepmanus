@@ -20,14 +20,14 @@ import {Loader2} from "lucide-react";
  * @param {function} onConfirm       delete: () => Promise; prompt: (name) => Promise
  */
 export function ConfirmDialog({
-    open,
-    mode,
-    title,
-    message,
-    defaultValue = "",
-    onCancel,
-    onConfirm,
-}) {
+                                  open,
+                                  mode,
+                                  title,
+                                  message,
+                                  defaultValue = "",
+                                  onCancel,
+                                  onConfirm,
+                              }) {
     const [value, setValue] = useState(defaultValue);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
@@ -146,7 +146,7 @@ export function ConfirmDialog({
                             confirmClass
                         )}
                     >
-                        {busy && <Loader2 className="size-3 animate-spin" />}
+                        {busy && <Loader2 className="size-3 animate-spin"/>}
                         {confirmLabel}
                     </button>
                 </div>

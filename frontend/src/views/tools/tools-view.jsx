@@ -4,6 +4,7 @@ import {Lock, Wrench} from "lucide-react";
 
 import {useStore} from "@/hooks/use-store.jsx";
 import {cn} from "@/lib/utils.js";
+import {LoadingState} from "@/components/ui/loading-state.jsx";
 import ToolDetail from "./tool-detail.jsx";
 
 const ToolCard = ({tool, onClick}) => {
@@ -55,14 +56,6 @@ const SectionTitle = ({children}) => {
     );
 }
 
-const Centered = ({children}) => {
-    return (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {children}
-        </div>
-    );
-}
-
 const ToolsView = observer(() => {
     const {toolStore} = useStore();
     const [selected, setSelected] = useState(null);
@@ -75,7 +68,7 @@ const ToolsView = observer(() => {
         return <ToolDetail name={selected} onBack={() => setSelected(null)} />;
     }
 
-    if (toolStore.loading) return <Centered>Loading tools…</Centered>;
+    if (toolStore.loading) return <LoadingState>Loading tools…</LoadingState>;
 
     const builtin = toolStore.tools.filter((t) => t.source === "builtin");
     const user = toolStore.tools.filter((t) => t.source === "user");

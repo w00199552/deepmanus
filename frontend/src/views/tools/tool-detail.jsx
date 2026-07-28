@@ -1,10 +1,11 @@
 import {useEffect} from "react";
 import {observer} from "mobx-react-lite";
-import {ChevronLeft, Loader2, Lock, Wrench} from "lucide-react";
+import {ChevronLeft, Lock, Wrench} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 
 import {useStore} from "@/hooks/use-store.jsx";
 import {useTheme} from "@/hooks/use-theme.js";
+import {LoadingState} from "@/components/ui/loading-state.jsx";
 import {Tree} from "@/components/ui/tree.jsx";
 import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 
@@ -16,12 +17,7 @@ const ToolDetail = observer(({name, onBack}) => {
         s.loadToolDetail(name);
     }, [name, s]);
 
-    if (s.detailLoading)
-        return (
-            <Centered>
-                <Loader2 className="size-4 animate-spin"/> Loading…
-            </Centered>
-        );
+    if (s.detailLoading) return <LoadingState>Loading…</LoadingState>;
 
     // Built-in tools have no source files (tree endpoint 404s).
     if (s.detailNotFound) {
@@ -144,15 +140,5 @@ function FileContent({file, isDark}) {
         <pre className="p-4 text-[13px] leading-relaxed text-muted-foreground/80">
             {file.content}
         </pre>
-    );
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function Centered({children}) {
-    return (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {children}
-        </div>
     );
 }

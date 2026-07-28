@@ -3,6 +3,7 @@ import {useEffect, useState} from "react";
 import {Sparkles} from "lucide-react";
 
 import {useStore} from "@/hooks/use-store.jsx";
+import {LoadingState} from "@/components/ui/loading-state.jsx";
 import SkillDetail from "./skill-detail.jsx";
 
 const SkillCard = ({skill, onClick}) => {
@@ -41,14 +42,6 @@ const SkillCard = ({skill, onClick}) => {
     );
 }
 
-const Centered = ({children}) => {
-    return (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {children}
-        </div>
-    );
-}
-
 const SkillsView = observer(() => {
     const {skillStore} = useStore();
     const [selected, setSelected] = useState(null);
@@ -61,7 +54,7 @@ const SkillsView = observer(() => {
         return <SkillDetail name={selected} onBack={() => setSelected(null)}/>;
     }
 
-    if (skillStore.loading) return <Centered>Loading skills…</Centered>;
+    if (skillStore.loading) return <LoadingState>Loading skills…</LoadingState>;
 
     return (
         <div className="h-full overflow-y-auto">

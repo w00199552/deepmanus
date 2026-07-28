@@ -1,4 +1,5 @@
 import {makeAutoObservable, runInAction} from "mobx";
+import {toast as sonnerToast} from "sonner";
 
 import {getAgent, listAgents, listSkills, listTools,} from "@/services/agent-service";
 
@@ -17,7 +18,6 @@ export class AgentStore {
     loading = false;
     saving = false;
     error = null;
-    toast = null;
 
     // edit drafts
     promptDraft = "";
@@ -34,12 +34,9 @@ export class AgentStore {
     presetListLoaded = false;
 
     _showToast(type, message) {
-        this.toast = {type, message};
-        setTimeout(() => {
-            runInAction(() => {
-                this.toast = null;
-            });
-        }, 3000);
+        // sonner manages its own auto-dismiss; no store state needed.
+        if (type === "error") sonnerToast.error(message);
+        else sonnerToast.success(message);
     }
 
     constructor() {

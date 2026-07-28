@@ -8,7 +8,12 @@ import {useTheme} from "@/hooks/use-theme.js";
 import {Avatar} from "@/components/avatar.jsx";
 import {AvatarPickerDialog} from "@/components/avatar-picker.jsx";
 import {cn} from "@/lib/utils.js";
-import {Centered, TabBtn, Toast} from "./components.jsx";
+import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs.jsx";
+import {LoadingState} from "@/components/ui/loading-state.jsx";
+
+// vertical shadcn Tabs trigger — left-aligned, fills width, matches sidebar style
+const tabTriggerCls =
+    "w-full justify-start gap-1.5 rounded-lg px-3 py-2 text-[13px] font-normal data-[state=active]:bg-foreground/8 data-[state=active]:font-medium data-[state=active]:text-foreground data-[state=active]:shadow-none hover:bg-foreground/6 hover:text-foreground";
 
 // ─── Agent detail (left tabs + right content) ───────────────────────────────
 const AgentDetail = observer(({name, onBack}) => {
@@ -19,12 +24,10 @@ const AgentDetail = observer(({name, onBack}) => {
     const [tab, setTab] = useState("prompt");
     const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
-    if (s.loading || !s.current) return <Centered>Loading…</Centered>;
+    if (s.loading || !s.current) return <LoadingState>Loading…</LoadingState>;
 
     return (
         <div className="flex h-full">
-            {s.toast && <Toast {...s.toast} />}
-
             <div className="flex w-56 shrink-0 flex-col border-r border-border/60 bg-sidebar/20">
                 <button
                     onClick={onBack}
@@ -48,49 +51,40 @@ const AgentDetail = observer(({name, onBack}) => {
                     </div>
                 </div>
 
-                <div className="mt-2 flex flex-col gap-0.5 px-2">
-                    <TabBtn
-                        active={tab === "info"}
-                        onClick={() => setTab("info")}
-                        icon={<Bot className="size-3.5"/>}
+                <div className="mt-2 px-2">
+                    <Tabs
+                        value={tab}
+                        onValueChange={setTab}
+                        orientation="vertical"
+                        className="gap-0.5"
                     >
-                        Info
-                    </TabBtn>
-                    <TabBtn
-                        active={tab === "prompt"}
-                        onClick={() => setTab("prompt")}
-                        icon={<FileText className="size-3.5"/>}
-                    >
-                        Prompt
-                    </TabBtn>
-                    <TabBtn
-                        active={tab === "tools"}
-                        onClick={() => setTab("tools")}
-                        icon={<Wrench className="size-3.5"/>}
-                    >
-                        Tools
-                    </TabBtn>
-                    <TabBtn
-                        active={tab === "skills"}
-                        onClick={() => setTab("skills")}
-                        icon={<Sparkles className="size-3.5"/>}
-                    >
-                        Skills
-                    </TabBtn>
-                    <TabBtn
-                        active={tab === "subagents"}
-                        onClick={() => setTab("subagents")}
-                        icon={<Bot className="size-3.5"/>}
-                    >
-                        SubAgents
-                    </TabBtn>
-                    <TabBtn
-                        active={tab === "interrupt"}
-                        onClick={() => setTab("interrupt")}
-                        icon={<AlertCircle className="size-3.5"/>}
-                    >
-                        Interrupt
-                    </TabBtn>
+                        <TabsList className="flex h-auto w-full flex-col items-stretch gap-0.5 rounded-none bg-transparent p-0">
+                            <TabsTrigger value="info" className={tabTriggerCls}>
+                                <Bot className="size-3.5"/>
+                                Info
+                            </TabsTrigger>
+                            <TabsTrigger value="prompt" className={tabTriggerCls}>
+                                <FileText className="size-3.5"/>
+                                Prompt
+                            </TabsTrigger>
+                            <TabsTrigger value="tools" className={tabTriggerCls}>
+                                <Wrench className="size-3.5"/>
+                                Tools
+                            </TabsTrigger>
+                            <TabsTrigger value="skills" className={tabTriggerCls}>
+                                <Sparkles className="size-3.5"/>
+                                Skills
+                            </TabsTrigger>
+                            <TabsTrigger value="subagents" className={tabTriggerCls}>
+                                <Bot className="size-3.5"/>
+                                SubAgents
+                            </TabsTrigger>
+                            <TabsTrigger value="interrupt" className={tabTriggerCls}>
+                                <AlertCircle className="size-3.5"/>
+                                Interrupt
+                            </TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
 
                 <div className="mt-auto p-3">

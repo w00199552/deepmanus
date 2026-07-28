@@ -7,7 +7,7 @@ import {Avatar} from "@/components/avatar.jsx";
 import {FancyButton} from "@/components/ui/fancy-button.jsx";
 import AgentDetail from "./agent-detail.jsx";
 import CreateAgent from "./create-agent.jsx";
-import {Centered, Toast} from "./components.jsx";
+import {LoadingState} from "@/components/ui/loading-state.jsx";
 
 /**
  * AgentsView — card grid → click to open config (left tabs: Prompt / Tools).
@@ -52,11 +52,10 @@ const AgentsView = observer(() => {
         );
     }
 
-    if (agentStore.loading) return <Centered>Loading…</Centered>;
+    if (agentStore.loading) return <LoadingState>Loading…</LoadingState>;
 
     return (
         <div className="h-full overflow-y-auto">
-            {agentStore.toast && <Toast {...agentStore.toast} />}
             <div className="mx-auto max-w-5xl px-6 py-8">
                 <div className="mb-6 flex items-center justify-between">
                     <Header/>

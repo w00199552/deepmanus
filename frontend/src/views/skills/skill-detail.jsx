@@ -1,10 +1,11 @@
 import {useEffect} from "react";
 import {observer} from "mobx-react-lite";
-import {ChevronLeft, Loader2, Sparkles} from "lucide-react";
+import {ChevronLeft, Sparkles} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 
 import {useStore} from "@/hooks/use-store.jsx";
 import {useTheme} from "@/hooks/use-theme.js";
+import {LoadingState} from "@/components/ui/loading-state.jsx";
 import {Tree} from "@/components/ui/tree.jsx";
 import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 
@@ -16,12 +17,7 @@ const SkillDetail = observer(({name, onBack}) => {
         s.loadSkillDetail(name).then();
     }, [name, s]);
 
-    if (s.detailLoading)
-        return (
-            <Centered>
-                <Loader2 className="size-4 animate-spin"/> Loading…
-            </Centered>
-        );
+    if (s.detailLoading) return <LoadingState>Loading…</LoadingState>;
 
     return (
         <div className="flex h-full">
@@ -112,14 +108,5 @@ function FileContent({file, isDark}) {
         <pre className="p-4 text-[13px] leading-relaxed text-muted-foreground/80">
             {file.content}
         </pre>
-    );
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-function Centered({children}) {
-    return (
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {children}
-        </div>
     );
 }
