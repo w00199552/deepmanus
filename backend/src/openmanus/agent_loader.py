@@ -37,6 +37,12 @@ AGENTS_DIR = OPENMANUS_HOME / "agents"
 # PyInstaller: --add-data seed/agents;seed/agents
 _SEED_DIR = Path(__file__).resolve().parent.parent.parent / "seed" / "agents"
 
+# Bundled avatar presets (backend/seed/avatars/). Generated offline by
+# scripts/gen_avatar_presets.py from the DiceBear adventurer style. Served at
+# runtime via the /avatar-presets static mount, so avatar selection never
+# reaches the network. PyInstaller: --add-data seed/avatars;seed/avatars
+AVATARS_SEED_DIR = Path(__file__).resolve().parent.parent.parent / "seed" / "avatars"
+
 
 class AgentLoader:
     """Loads agent definitions from the filesystem (~/.openmanus/agents/)."""
@@ -208,37 +214,26 @@ class AgentLoader:
         if name in self._configs:
             self._configs[name]["description"] = description
 
-    def save_avatar(self, name: str, seed: str) -> str:
-        """Generate a DiceBear avatar SVG and save it to the agent's directory.
+    def save_avatar(self, name: str, preset_id: str) -> str:
+        """Apply a bundled avatar preset to an agent.
 
-        Downloads from DiceBear HTTP API using the given seed, saves as
-        avatar.svg in ~/.openmanus/agents/{name}/. For built-in agents,
-        also saves to backend/seed/agents/{name}/avatar.svg.
+        Reads the preset SVG from backend/seed/avatars/{preset_id}.svg (no
+        network access) and writes it to ~/.openmanus/agents/{name}/avatar.svg.
+        For built-in agents, also mirrors the file into backend/seed/agents/
+        {name}/avatar.svg. Updates agent.yaml's 'avatar' field with the
+        preset_id.
 
-        Updates agent.yaml's 'avatar' field with the seed value.
-
-        Returns the seed used.
+        Returns the preset_id applied.
         """
-        import httpx
-
         d = self._agent_dir(name)
         if not d.exists():
             raise ValueError(f"agent directory not found: {d}")
 
-        # DiceBear adventurer style — same params as frontend avatarUrl
-        skin_tones = ["ffdfba", "f5d0b0"]
-        h = 0
-        for ch in seed:
-            h = (h * 31 + ord(ch)) & 0xFFFFFFFF
-        skin = skin_tones[h % len(skin_tones)]
-        url = (
-            f"https://api.dicebear.com/9.x/adventurer/svg"
-            f"?seed={seed}&backgroundColor=transparent&radius=50&skinColor={skin}"
-        )
-
-        resp = httpx.get(url, timeout=10.0)
-        resp.raise_for_status()
-        svg_content = resp.text
+        preset_id = self._validate_preset_id(preset_id)
+        svg_path = AVATARS_SEED_DIR / f"{preset_id}.svg"
+        if not svg_path.exists():
+            raise ValueError(f"avatar preset file not found: {svg_path}")
+        svg_content = svg_path.read_text(encoding="utf-8")
 
         # Save to user directory
         avatar_path = d / "avatar.svg"
@@ -254,17 +249,37 @@ class AgentLoader:
         if yaml_path.exists():
             raw = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
-                raw["avatar"] = seed
+                raw["avatar"] = preset_id
                 yaml_path.write_text(
                     yaml.dump(raw, default_flow_style=False, allow_unicode=True),
                     encoding="utf-8",
                 )
 
         if name in self._configs:
-            self._configs[name]["avatar"] = seed
+            self._configs[name]["avatar"] = preset_id
 
-        logger.info("saved avatar for agent %s (seed=%s)", name, seed)
-        return seed
+        logger.info("saved avatar for agent %s (preset=%s)", name, preset_id)
+        return preset_id
+
+    @staticmethod
+    def _validate_preset_id(preset_id: str) -> str:
+        """Normalize + validate a preset id against the bundled manifest.
+
+        Accepts the bare id ("01") or the filename ("01.svg"). Raises
+        ValueError if the id is unknown to the manifest.
+        """
+        if not preset_id:
+            raise ValueError("preset_id is required")
+        pid = preset_id.strip()
+        if pid.endswith(".svg"):
+            pid = pid[:-4]
+        valid = {p["id"] for p in list_avatar_presets()}
+        if pid not in valid:
+            raise ValueError(
+                f"unknown avatar preset: {preset_id!r} "
+                f"(valid: {len(valid)} presets)"
+            )
+        return pid
 
     def create(self, name: str, prompt: str, tools: list[str], description: str = "") -> dict:
         name = name.strip()
@@ -319,5 +334,44 @@ class AgentLoader:
         return self._configs
 
 
+def list_avatar_presets() -> list[dict]:
+    """List bundled avatar presets from backend/seed/avatars/manifest.json.
+
+    Returns a list of {id, file, seed, url} dicts. The url is the static
+    path served by the /avatar-presets mount (e.g. "/avatar-presets/01.svg").
+    Cached after first read. Returns [] if the manifest is missing (e.g.
+    seed dir not bundled) so callers can degrade gracefully.
+    """
+    global _avatar_presets_cache
+    if _avatar_presets_cache is not None:
+        return _avatar_presets_cache
+    manifest_path = AVATARS_SEED_DIR / "manifest.json"
+    if not manifest_path.exists():
+        logger.warning("avatar presets manifest not found: %s", manifest_path)
+        _avatar_presets_cache = []
+        return _avatar_presets_cache
+    import json
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as e:  # noqa: BLE001
+        logger.error("failed to parse avatar manifest: %s", e)
+        _avatar_presets_cache = []
+        return _avatar_presets_cache
+    presets = []
+    for p in manifest.get("presets", []):
+        pid = p.get("id", "")
+        file = p.get("file", f"{pid}.svg")
+        presets.append({
+            "id": pid,
+            "file": file,
+            "seed": p.get("seed", ""),
+            "url": f"/avatar-presets/{file}",
+        })
+    _avatar_presets_cache = presets
+    return presets
+
+
 # Module-level singleton.
+_avatar_presets_cache: list[dict] | None = None
 agent_loader = AgentLoader()

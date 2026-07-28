@@ -24,8 +24,14 @@ export class AgentStore {
     descriptionDraft = "";
     toolDraft = new Set();
     skillDraft = new Set();
-    avatarVersion = 0; // bump to force avatar reload after regenerate
     avatarLoading = false;
+    // bumped after any avatar changes; <Avatar> subscribes and uses it to
+    // cache-bust its <img> URL. Centralized here so callers never pass a
+    // version prop — every avatar on screen refreshes automatically.
+    avatarReloadSignal = 0;
+    // bundled avatar presets (offline): [{id, file, seed, url}]
+    presetList = [];
+    presetListLoaded = false;
 
     _showToast(type, message) {
         this.toast = {type, message};
@@ -169,8 +175,29 @@ export class AgentStore {
         });
     }
 
-    /** Regenerate the current agent's avatar (DiceBear → save SVG). */
-    async regenerateAvatar() {
+    /** Load bundled avatar presets (offline). Lazy, cached. */
+    async loadAvatarPresets() {
+        if (this.presetListLoaded) return this.presetList;
+        try {
+            const res = await fetch(`${BACKEND}/agents/avatar-presets`);
+            if (!res.ok) throw new Error(`load presets failed: ${res.status}`);
+            const j = await res.json();
+            runInAction(() => {
+                this.presetList = j.presets || [];
+                this.presetListLoaded = true;
+            });
+            return this.presetList;
+        } catch (e) {
+            this._showToast("error", e.message || "头像预设加载失败");
+            return [];
+        }
+    }
+
+    /**
+     * Apply an avatar preset to the current agent.
+     * @param {string} presetId  e.g. "07"; if omitted, backend picks a random preset
+     */
+    async setAvatar(presetId) {
         if (!this.current || this.avatarLoading) return;
         runInAction(() => {
             this.avatarLoading = true;
@@ -178,15 +205,28 @@ export class AgentStore {
         try {
             const res = await fetch(
                 `${BACKEND}/agents/${encodeURIComponent(this.current.name)}/avatar/regenerate`,
-                {method: "POST"}
+                {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({preset_id: presetId || null}),
+                }
             );
-            if (!res.ok) throw new Error(`regenerate failed: ${res.status}`);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || `set avatar failed: ${res.status}`);
+            }
+            const j = await res.json();
             runInAction(() => {
-                this.avatarVersion++; // force avatar img reload
+                // Update local data so cards/lists reflect the new avatar.
+                if (this.current) this.current.avatar = j.avatar;
+                const inList = this.agents.find((a) => a.name === this.current?.name);
+                if (inList) inList.avatar = j.avatar;
+                // Bump the signal so every <Avatar> on screen cache-busts.
+                this.avatarReloadSignal++;
             });
-            this._showToast("success", "头像已重新生成");
+            this._showToast("success", "头像已更新");
         } catch (e) {
-            this._showToast("error", e.message || "头像生成失败");
+            this._showToast("error", e.message || "头像更新失败");
         } finally {
             runInAction(() => {
                 this.avatarLoading = false;

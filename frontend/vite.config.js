@@ -34,6 +34,10 @@ export default defineConfig({
         target: 'http://127.0.0.1:8999',
         changeOrigin: true,
       },
+      '/avatar-presets': {
+        target: 'http://127.0.0.1:8999',
+        changeOrigin: true,
+      },
       '/skills': {
         target: 'http://127.0.0.1:8999',
         changeOrigin: true,

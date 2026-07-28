@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..agent_loader import agent_loader
+from ..agent_loader import agent_loader, list_avatar_presets
 from ..skill_loader import skill_loader
 from ..tool_loader import tool_loader
 
@@ -66,6 +66,19 @@ class CreateAgentBody(BaseModel):
     prompt: str = ""
     tools: list[str] = []
     skills: list[str] = []
+
+
+class AvatarPresetInfo(BaseModel):
+    """One bundled avatar preset (served from /avatar-presets)."""
+    id: str
+    file: str
+    seed: str = ""
+    url: str
+
+
+class SetAvatarBody(BaseModel):
+    """Optional explicit preset id; if omitted a random preset is chosen."""
+    preset_id: str | None = None
 
 
 # Catalog of always-available tools (not in ~/.openmanus/tools/).
@@ -154,6 +167,23 @@ async def list_all_skills() -> list[SkillInfo]:
     ]
 
 
+@router.get("/avatar-presets")
+async def list_avatar_presets_endpoint() -> dict:
+    """List the bundled avatar presets (served offline from /avatar-presets).
+
+    Declared BEFORE /{name} so FastAPI matches the static path first;
+    otherwise "avatar-presets" would be captured by the {name} param.
+
+    Returns {count, presets: [{id, file, seed, url}]}. Used by the frontend
+    avatar picker grid.
+    """
+    presets = list_avatar_presets()
+    return {
+        "count": len(presets),
+        "presets": [AvatarPresetInfo(**p).model_dump() for p in presets],
+    }
+
+
 @router.get("/{name}")
 async def get_agent(name: str) -> AgentDetail:
     """Get one agent's full config (including prompt text)."""
@@ -172,21 +202,33 @@ async def get_agent(name: str) -> AgentDetail:
 
 
 @router.post("/{name}/avatar/regenerate")
-async def regenerate_avatar(name: str) -> dict:
-    """Generate a new DiceBear avatar for an agent and save it as SVG.
+async def regenerate_avatar(name: str, body: SetAvatarBody | None = None) -> dict:
+    """Apply an avatar preset to an agent (offline, no network).
 
-    Generates a random seed, downloads the SVG from DiceBear, saves to
+    If body.preset_id is provided, that preset is applied; otherwise a preset
+    is chosen at random from the bundled pool (preserves the "regenerate"
+    convenience flow). The selected preset's SVG is copied to
     ~/.openmanus/agents/{name}/avatar.svg (+ seed dir for built-in agents).
     """
     if not agent_loader.get(name):
         raise HTTPException(status_code=404, detail="agent not found")
-    import uuid
-    seed = uuid.uuid4().hex[:12]
+    presets = list_avatar_presets()
+    if not presets:
+        raise HTTPException(
+            status_code=500,
+            detail="no avatar presets bundled (seed/avatars/ missing)",
+        )
+    preset_id = (body.preset_id if body and body.preset_id else None)
+    if preset_id is None:
+        import random
+        preset_id = random.choice(presets)["id"]
     try:
-        agent_loader.save_avatar(name, seed)
+        applied = agent_loader.save_avatar(name, preset_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=f"avatar generation failed: {e}")
-    return {"ok": True, "avatar": seed}
+    return {"ok": True, "avatar": applied}
 
 
 @router.post("")

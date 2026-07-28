@@ -1,0 +1,264 @@
+{
+  "style": "dicebear-adventurer-9.x",
+  "count": 50,
+  "params": {
+    "backgroundColor": "transparent",
+    "radius": 50,
+    "skinTones": [
+      "ffdfba",
+      "f5d0b0"
+    ]
+  },
+  "presets": [
+    {
+      "id": "01",
+      "file": "01.svg",
+      "seed": "openmanus-avatar-01"
+    },
+    {
+      "id": "02",
+      "file": "02.svg",
+      "seed": "openmanus-avatar-02"
+    },
+    {
+      "id": "03",
+      "file": "03.svg",
+      "seed": "openmanus-avatar-03"
+    },
+    {
+      "id": "04",
+      "file": "04.svg",
+      "seed": "openmanus-avatar-04"
+    },
+    {
+      "id": "05",
+      "file": "05.svg",
+      "seed": "openmanus-avatar-05"
+    },
+    {
+      "id": "06",
+      "file": "06.svg",
+      "seed": "openmanus-avatar-06"
+    },
+    {
+      "id": "07",
+      "file": "07.svg",
+      "seed": "openmanus-avatar-07"
+    },
+    {
+      "id": "08",
+      "file": "08.svg",
+      "seed": "openmanus-avatar-08"
+    },
+    {
+      "id": "09",
+      "file": "09.svg",
+      "seed": "openmanus-avatar-09"
+    },
+    {
+      "id": "10",
+      "file": "10.svg",
+      "seed": "openmanus-avatar-10"
+    },
+    {
+      "id": "11",
+      "file": "11.svg",
+      "seed": "openmanus-avatar-11"
+    },
+    {
+      "id": "12",
+      "file": "12.svg",
+      "seed": "openmanus-avatar-12"
+    },
+    {
+      "id": "13",
+      "file": "13.svg",
+      "seed": "openmanus-avatar-13"
+    },
+    {
+      "id": "14",
+      "file": "14.svg",
+      "seed": "openmanus-avatar-14"
+    },
+    {
+      "id": "15",
+      "file": "15.svg",
+      "seed": "openmanus-avatar-15"
+    },
+    {
+      "id": "16",
+      "file": "16.svg",
+      "seed": "openmanus-avatar-16"
+    },
+    {
+      "id": "17",
+      "file": "17.svg",
+      "seed": "openmanus-avatar-17"
+    },
+    {
+      "id": "18",
+      "file": "18.svg",
+      "seed": "openmanus-avatar-18"
+    },
+    {
+      "id": "19",
+      "file": "19.svg",
+      "seed": "openmanus-avatar-19"
+    },
+    {
+      "id": "20",
+      "file": "20.svg",
+      "seed": "openmanus-avatar-20"
+    },
+    {
+      "id": "21",
+      "file": "21.svg",
+      "seed": "openmanus-avatar-21"
+    },
+    {
+      "id": "22",
+      "file": "22.svg",
+      "seed": "openmanus-avatar-22"
+    },
+    {
+      "id": "23",
+      "file": "23.svg",
+      "seed": "openmanus-avatar-23"
+    },
+    {
+      "id": "24",
+      "file": "24.svg",
+      "seed": "openmanus-avatar-24"
+    },
+    {
+      "id": "25",
+      "file": "25.svg",
+      "seed": "openmanus-avatar-25"
+    },
+    {
+      "id": "26",
+      "file": "26.svg",
+      "seed": "openmanus-avatar-26"
+    },
+    {
+      "id": "27",
+      "file": "27.svg",
+      "seed": "openmanus-avatar-27"
+    },
+    {
+      "id": "28",
+      "file": "28.svg",
+      "seed": "openmanus-avatar-28"
+    },
+    {
+      "id": "29",
+      "file": "29.svg",
+      "seed": "openmanus-avatar-29"
+    },
+    {
+      "id": "30",
+      "file": "30.svg",
+      "seed": "openmanus-avatar-30"
+    },
+    {
+      "id": "31",
+      "file": "31.svg",
+      "seed": "openmanus-avatar-31"
+    },
+    {
+      "id": "32",
+      "file": "32.svg",
+      "seed": "openmanus-avatar-32"
+    },
+    {
+      "id": "33",
+      "file": "33.svg",
+      "seed": "openmanus-avatar-33"
+    },
+    {
+      "id": "34",
+      "file": "34.svg",
+      "seed": "openmanus-avatar-34"
+    },
+    {
+      "id": "35",
+      "file": "35.svg",
+      "seed": "openmanus-avatar-35"
+    },
+    {
+      "id": "36",
+      "file": "36.svg",
+      "seed": "openmanus-avatar-36"
+    },
+    {
+      "id": "37",
+      "file": "37.svg",
+      "seed": "openmanus-avatar-37"
+    },
+    {
+      "id": "38",
+      "file": "38.svg",
+      "seed": "openmanus-avatar-38"
+    },
+    {
+      "id": "39",
+      "file": "39.svg",
+      "seed": "openmanus-avatar-39"
+    },
+    {
+      "id": "40",
+      "file": "40.svg",
+      "seed": "openmanus-avatar-40"
+    },
+    {
+      "id": "41",
+      "file": "41.svg",
+      "seed": "openmanus-avatar-41"
+    },
+    {
+      "id": "42",
+      "file": "42.svg",
+      "seed": "openmanus-avatar-42"
+    },
+    {
+      "id": "43",
+      "file": "43.svg",
+      "seed": "openmanus-avatar-43"
+    },
+    {
+      "id": "44",
+      "file": "44.svg",
+      "seed": "openmanus-avatar-44"
+    },
+    {
+      "id": "45",
+      "file": "45.svg",
+      "seed": "openmanus-avatar-45"
+    },
+    {
+      "id": "46",
+      "file": "46.svg",
+      "seed": "openmanus-avatar-46"
+    },
+    {
+      "id": "47",
+      "file": "47.svg",
+      "seed": "openmanus-avatar-47"
+    },
+    {
+      "id": "48",
+      "file": "48.svg",
+      "seed": "openmanus-avatar-48"
+    },
+    {
+      "id": "49",
+      "file": "49.svg",
+      "seed": "openmanus-avatar-49"
+    },
+    {
+      "id": "50",
+      "file": "50.svg",
+      "seed": "openmanus-avatar-50"
+    }
+  ]
+}

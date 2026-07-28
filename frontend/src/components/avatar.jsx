@@ -1,69 +1,76 @@
 import {useState} from "react";
+import {observer} from "mobx-react-lite";
+
+import {useStore} from "@/hooks/use-store.jsx";
 import {cn} from "@/lib/utils";
 
 /**
- * Avatar components — DiceBear "adventurer" style, zero-dependency via HTTP API.
+ * Avatar components — backed by a BUNDLED set of 50 DiceBear "adventurer"
+ * SVG presets served offline from /avatar-presets (no network call).
  *
- * The same seed always renders the same face, so a session keeps one stable
- * identity. Background is transparent so the avatar blends onto our dark
- * surfaces; a subtle ring separates it from the canvas.
+ * Resolution order for an agent:
+ *   1. local saved avatar → /agent-assets/{name}/avatar.svg  (preferred)
+ *   2. on error → a deterministic preset from /avatar-presets/XX.svg (fallback)
  *
- *   https://api.dicebear.com/9.x/adventurer/svg?seed=<seed>&backgroundColor=transparent
+ * The same seed always maps to the same preset, so an identity keeps a
+ * stable face even without a saved local avatar. Background is transparent
+ * so the avatar blends onto dark surfaces; a subtle ring separates it.
  *
- * Seed mapping (drives the face):
+ * Seed mapping (drives which preset/fallback):
  *   - root / default session → its session id (each chat gets a unique face)
  *   - subagent session       → its role name ("Researcher" / "Coder" / ...)
  *   - team session           → its member role seeds (overlapped avatars)
  */
 
-const API = "https://api.dicebear.com/9.x/adventurer/svg";
+// Number of bundled presets (backend/seed/avatars/01.svg .. NN.svg). Kept in
+// sync with scripts/gen_avatar_presets.py --count (default 50).
+const PRESET_COUNT = 50;
 
-// Light/tan skin tones only (the rest of the adventurer palette skewed too
-// dark). Deterministically pick one per seed so a face keeps a stable tone.
-const SKIN_TONES = ["ffdfba", "f5d0b0"];
-
-function skinForSeed(seed) {
-    // simple deterministic hash → pick a skin tone (same seed = same tone)
-    let h = 0;
-    for (let i = 0; i < seed.length; i++)
-        h = (h * 31 + seed.charCodeAt(i)) >>> 0;
-    return SKIN_TONES[h % SKIN_TONES.length];
-}
-
-function avatarUrl(seed) {
+/**
+ * Map any seed to one of the bundled preset SVGs (offline fallback).
+ * Same seed → same preset. Mirrors the backend hash in agent_loader.
+ */
+function presetAvatarUrl(seed) {
     const s = seed || "default";
-    const skin = skinForSeed(s);
-    // transparent bg + radius so it sits cleanly on dark surfaces; skinColor
-    // forces variety the default palette wouldn't give us.
-    return `${API}?seed=${encodeURIComponent(s)}&backgroundColor=transparent&radius=50&skinColor=${skin}`;
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    const id = String((h % PRESET_COUNT) + 1).padStart(2, "0");
+    return `/avatar-presets/${id}.svg`;
 }
 
 /**
- * Build the local avatar URL for an agent (saved avatar.svg).
+ * Build the local avatar URL for an agent (saved avatar.svg), WITHOUT any
+ * cache-busting query. Cache invalidation is handled centrally inside the
+ * Avatar component via agentStore.avatarReloadSignal, so callers never need
+ * to thread a version through.
  * @param {string} agentName
- * @param {number} [version]  cache-busting version (bump to force reload)
  * Returns null if agentName is falsy or not a real agent name (e.g. "user-face").
  */
 const NON_AGENT_SEEDS = new Set(["user-face", "team", "unknown", "default", "main"]);
 
-export function localAvatarUrl(agentName, version) {
-    console.log("localAvatarUrl", agentName, version);
+export function localAvatarUrl(agentName) {
     if (!agentName || NON_AGENT_SEEDS.has(agentName)) return null;
-    const base = `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
-    return version ? `${base}?v=${version}` : base;
+    return `/agent-assets/${encodeURIComponent(agentName)}/avatar.svg`;
 }
 
 /**
- * A single avatar.
- * @param {string} seed  stable identity (agent name) — used for DiceBear fallback
+ * A single avatar. Subscribes to agentStore.avatarReloadSignal so that when
+ * ANY agent's avatar is updated, this <img> re-fetches the (same-URL) SVG
+ * instead of serving the stale in-memory copy. Callers pass only `seed` —
+ * no version plumbing needed.
+ * @param {string} seed  stable identity (agent name) — used for preset fallback
  * @param {number} [size=36] px
  * @param {string} [src]  optional explicit image URL (overrides local lookup)
- * @param {number} [version]  cache-busting version for local avatar reload
  */
-export function Avatar({seed, size = 36, className, src, version}) {
+export const Avatar = observer(function Avatar({seed, size = 36, className, src}) {
+    const {agentStore} = useStore();
+    const signal = agentStore?.avatarReloadSignal ?? 0;
     const [useFallback, setUseFallback] = useState(false);
-    const localSrc = src || localAvatarUrl(seed, version);
-    const imgSrc = (localSrc && !useFallback) ? localSrc : avatarUrl(seed);
+    // Append ?v=<signal> to bust the browser cache when an avatar changes.
+    // signal changes → URL changes → <img> re-fetches.
+    const localSrc = src || localAvatarUrl(seed);
+    const localSrcBusted = localSrc ? `${localSrc}?v=${signal}` : null;
+    const imgSrc = (localSrcBusted && !useFallback) ? localSrcBusted : presetAvatarUrl(seed);
 
     return (
         <img
@@ -73,7 +80,7 @@ export function Avatar({seed, size = 36, className, src, version}) {
             height={size}
             loading="lazy"
             onError={() => {
-                if (!useFallback && localSrc) setUseFallback(true);
+                if (!useFallback && localSrcBusted) setUseFallback(true);
             }}
             className={cn(
                 "shrink-0 rounded-full bg-card/60 object-cover ring-1 ring-border",
@@ -82,7 +89,7 @@ export function Avatar({seed, size = 36, className, src, version}) {
             style={{width: size, height: size}}
         />
     );
-}
+});
 
 /**
  * A team avatar: a single badge containing mini member faces, communicating
@@ -119,11 +126,14 @@ export function TeamAvatar({seeds, size = 36}) {
     );
 }
 
-/** A mini avatar inside TeamAvatar — supports local SVG + DiceBear fallback. */
-function MiniAvatar({seed, size}) {
+/** A mini avatar inside TeamAvatar — supports local SVG + preset fallback. */
+const MiniAvatar = observer(function MiniAvatar({seed, size}) {
+    const {agentStore} = useStore();
+    const signal = agentStore?.avatarReloadSignal ?? 0;
     const [useFallback, setUseFallback] = useState(false);
     const localSrc = localAvatarUrl(seed);
-    const imgSrc = (localSrc && !useFallback) ? localSrc : avatarUrl(seed);
+    const localSrcBusted = localSrc ? `${localSrc}?v=${signal}` : null;
+    const imgSrc = (localSrcBusted && !useFallback) ? localSrcBusted : presetAvatarUrl(seed);
     return (
         <img
             src={imgSrc}
@@ -132,13 +142,13 @@ function MiniAvatar({seed, size}) {
             height={size}
             loading="lazy"
             onError={() => {
-                if (!useFallback && localSrc) setUseFallback(true);
+                if (!useFallback && localSrcBusted) setUseFallback(true);
             }}
             className="rounded-full bg-card object-cover ring-1 ring-card"
             style={{width: size, height: size}}
         />
     );
-}
+});
 
 /**
  * Topic avatar: renders based on the topic's agent roster.
@@ -148,7 +158,6 @@ function MiniAvatar({seed, size}) {
  * @param {number} [size=36]
  */
 export function TopicAvatar({topic, size = 36}) {
-    console.log("topic", topic);
     if (topic.kind === "team") {
         return <TeamAvatar seeds={topic.agents} size={size}/>;
     } else {

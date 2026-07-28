@@ -1,11 +1,12 @@
 import {observer} from "mobx-react-lite";
 import {useEffect, useState} from "react";
-import {AlertCircle, Bot, Check, ChevronLeft, FileText, Lock, Save, Sparkles, Wrench,} from "lucide-react";
+import {AlertCircle, Bot, Check, ChevronLeft, FileText, Image, Lock, Save, Sparkles, Wrench,} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 
 import {useStore} from "@/hooks/use-store.jsx";
 import {useTheme} from "@/hooks/use-theme.js";
 import {Avatar} from "@/components/avatar.jsx";
+import {AvatarPickerDialog} from "@/components/avatar-picker.jsx";
 import {FancyButton} from "@/components/ui/fancy-button.jsx";
 import {cn} from "@/lib/utils.js";
 
@@ -113,6 +114,7 @@ const AgentDetail = observer(function AgentDetail({name, onBack}) {
     const {isDark} = useTheme();
     const colorMode = isDark ? "dark" : "light";
     const [tab, setTab] = useState("prompt");
+    const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
     if (s.loading || !s.current) return <Centered>Loading…</Centered>;
 
@@ -131,7 +133,7 @@ const AgentDetail = observer(function AgentDetail({name, onBack}) {
 
                 <div className="px-4 py-2">
                     <div className="flex items-center gap-2">
-                        <Avatar seed={s.current.name} size={36} version={s.avatarVersion}/>
+                        <Avatar seed={s.current.name} size={36}/>
                         <div>
                             <div className="text-sm font-medium">
                                 {s.current.name}
@@ -210,17 +212,20 @@ const AgentDetail = observer(function AgentDetail({name, onBack}) {
                                 <Avatar
                                     seed={s.current.name}
                                     size={64}
-                                    version={s.avatarVersion}
                                 />
                                 <button
-                                    onClick={() => s.regenerateAvatar()}
+                                    onClick={() => setAvatarPickerOpen(true)}
                                     disabled={s.avatarLoading}
                                     className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-sidebar/30 px-3 py-2 text-[12px] text-muted-foreground transition hover:border-accent/40 hover:text-foreground disabled:opacity-50"
                                 >
-                                    <Sparkles className={cn("size-3.5", s.avatarLoading && "animate-spin")}/>
-                                    {s.avatarLoading ? "生成中…" : "重新生成"}
+                                    <Image className={cn("size-3.5", s.avatarLoading && "animate-spin")}/>
+                                    {s.avatarLoading ? "更新中…" : "选择头像"}
                                 </button>
                             </div>
+                            <AvatarPickerDialog
+                                open={avatarPickerOpen}
+                                onOpenChange={setAvatarPickerOpen}
+                            />
                             <div>
                                 <label className="mb-1 block text-[12px] font-medium text-muted-foreground">
                                     Name
