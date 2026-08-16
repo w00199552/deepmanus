@@ -10,6 +10,7 @@ from openmanus.topics.mailbox_store import mailbox_store
 from openmanus.topics.store import MAIN_TOPIC_ID, session_store, topic_store
 from openmanus.topics.whiteboard_store import whiteboard_store
 
+
 def _default_agent_fallback(session: Session) -> str:
     if session.name:
         return session.name

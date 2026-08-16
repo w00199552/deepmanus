@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+import pytest
 import tempfile
 from pathlib import Path
 
-import pytest
-
-from openmanus.common.exceptions import TopicDeleteError
-from openmanus.db import init_db
 from openmanus.agents.agent_factory import (
     resolve_session_id,
     resolve_topic_id,
     compute_thread_id,
 )
+from openmanus.common.exceptions import TopicDeleteError
+from openmanus.config import settings
+from openmanus.db import init_db
 from openmanus.topics.store import (
     MAIN_TOPIC_ID,
     SessionStore,
@@ -19,7 +19,7 @@ from openmanus.topics.store import (
     session_store,
     topic_store,
 )
-from openmanus.config import settings
+
 
 @pytest.fixture(autouse=True)
 def _isolate_db():

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import pytest
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from openmanus.config import settings
 from openmanus.db import init_db
+from openmanus.topics.mailbox_store import mailbox_store
 from openmanus.topics.store import session_store, topic_store
 from openmanus.topics.whiteboard_store import whiteboard_store
-from openmanus.topics.mailbox_store import mailbox_store
+
 
 @pytest.fixture(autouse=True)
 def _isolate_db():

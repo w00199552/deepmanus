@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field

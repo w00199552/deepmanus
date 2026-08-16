@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
-from typing import Any
-
 import pytest
 import yaml
+from pathlib import Path
+from typing import Any
 
 BACKEND_ROOT = Path(__file__).resolve().parent.parent
 SEED_AGENTS_DIR = BACKEND_ROOT / "seed" / "agents"

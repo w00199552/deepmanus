@@ -7,11 +7,6 @@ import re
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field
-from datetime import datetime
-from pathlib import Path
-from typing import Any
-
 from conftest_eval import (
     _REPORTS_ROOT,
     AgentRunResult,
@@ -20,6 +15,10 @@ from conftest_eval import (
     prepare_workdir,
     run_coder,
 )
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 COMMENT_DENSITY_THRESHOLD = 0.30
 DIFF_BLOWUP_FACTOR = 2.0

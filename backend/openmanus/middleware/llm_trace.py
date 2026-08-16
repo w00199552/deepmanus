@@ -6,6 +6,7 @@ from typing import Any
 
 from openmanus.log import logger
 
+
 def _short(text: Any, n: int = 200) -> str:
     s = str(text).replace("\n", " ").strip()
     return s[:n] + ("…" if len(s) > n else "")

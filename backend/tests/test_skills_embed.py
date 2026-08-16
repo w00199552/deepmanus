@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import os
+import pytest
 import sys
 from pathlib import Path
 
-import pytest
-
 from openmanus.skills import embed
+
 
 @pytest.fixture
 def embed_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:

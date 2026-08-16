@@ -5,6 +5,7 @@ import inspect
 import sys
 from pathlib import Path
 
+
 def _load_module(workdir: Path):
     calc = workdir / "calc.py"
     if not calc.exists():

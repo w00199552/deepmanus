@@ -9,6 +9,7 @@ AVATARS_SEED_DIR = Path(__file__).resolve().parent.parent.parent / "seed" / "ava
 
 _avatar_presets_cache: list[dict] | None = None
 
+
 def list_avatar_presets() -> list[dict]:
     global _avatar_presets_cache
     if _avatar_presets_cache is not None:
@@ -37,6 +38,7 @@ def list_avatar_presets() -> list[dict]:
         })
     _avatar_presets_cache = presets
     return presets
+
 
 def validate_preset_id(preset_id: str) -> str:
     if not preset_id:

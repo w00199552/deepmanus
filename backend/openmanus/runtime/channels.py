@@ -9,6 +9,7 @@ from openmanus.topics.entities import MailboxMessage
 from openmanus.topics.mailbox_store import mailbox_store, set_channel_pusher
 from openmanus.topics.store import session_store
 
+
 class ChannelRegistry:
 
     def __init__(self) -> None:

@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from openmanus.sandbox.entities import FileNode
 
+
 class Tool(BaseModel):
 
     name: str = Field(description="工具名")

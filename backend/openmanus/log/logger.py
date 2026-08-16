@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import sys
+from loguru import logger as _logger
 from pathlib import Path
 
-from loguru import logger as _logger
 
 def setup_logger(log_path: str | None = None):
     from loguru import logger

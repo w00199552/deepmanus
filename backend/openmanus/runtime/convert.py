@@ -5,6 +5,7 @@ from typing import Any
 
 from openmanus.runtime.event_schema import ev_message_end
 
+
 def _new_id() -> str:
     return uuid.uuid4().hex
 

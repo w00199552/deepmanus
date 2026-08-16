@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import yaml
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from openmanus.log import logger
 

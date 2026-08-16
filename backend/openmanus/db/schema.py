@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import aiosqlite
+from pathlib import Path
 
 from openmanus.db.path import get_db_path
 

@@ -8,13 +8,13 @@ class Agent(BaseModel):
     model_config = {"validate_assignment": True}
 
     name: str = Field(description="Agent 名称")
+    avatar: str = Field(default="", description="头像预设 ID")
     description: str = Field(default="", description="Agent 描述")
     prompt: str = Field(default="", description="系统提示词")
     tools: list[str] = Field(default_factory=list, description="统一工具白名单")
     skills: list[str] = Field(default_factory=list, description="技能白名单")
     sub_agents: list[str] = Field(default_factory=list, description="可派发的子 agent")
     is_builtin: bool = Field(default=False, description="是否内置 agent")
-    avatar: str = Field(default="", description="头像预设 ID")
 
 
 class AvatarPreset(BaseModel):

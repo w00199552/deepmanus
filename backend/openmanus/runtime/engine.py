@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-
 from langchain_core.messages import HumanMessage
 
 from openmanus.log import logger
@@ -11,6 +10,7 @@ from openmanus.runtime.convert import StreamState, close_open, convert_chunk
 from openmanus.topics.mailbox_store import mailbox_store, set_wakeup_callback
 from openmanus.topics.store import session_store
 from openmanus.topics.whiteboard_store import whiteboard_store
+
 
 async def _final_text(agent, config) -> str:
     try:

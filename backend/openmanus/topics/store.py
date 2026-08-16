@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import aiosqlite
 import json
 import uuid
 from typing import Any
-
-import aiosqlite
 
 from openmanus.common.exceptions import NotFoundError, TopicDeleteError
 from openmanus.config import settings

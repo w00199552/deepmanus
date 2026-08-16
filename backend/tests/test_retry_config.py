@@ -6,6 +6,7 @@ from langchain.agents.middleware import ModelRetryMiddleware, ToolRetryMiddlewar
 
 from openmanus.middleware.retry import build_retry_middlewares, is_transient
 
+
 @pytest.fixture
 def http_request():
     return httpx.Request("POST", "https://example.invalid/chat")

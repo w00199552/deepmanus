@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import os
 import shutil
+import yaml
 from pathlib import Path
 from typing import Any
-
-import yaml
 
 from openmanus.agents import avatar
 from openmanus.agents.entities import Agent

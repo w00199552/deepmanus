@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Any
-
 from langchain.agents.middleware import (
     ModelRetryMiddleware,
     ToolRetryMiddleware,
 )
 from langchain.agents.middleware.types import AgentMiddleware
+from typing import Any
 
 from openmanus.log import logger
 

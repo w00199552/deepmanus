@@ -4,6 +4,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
+
 def _load_module(workdir: Path):
     bfs = workdir / "bfs.py"
     if not bfs.exists():

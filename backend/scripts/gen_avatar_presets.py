@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import httpx
 import json
 import sys
 import time
 from pathlib import Path
-
-import httpx
 
 SEED_AVATARS_DIR = (
     Path(__file__).resolve().parent.parent / "seed" / "avatars"

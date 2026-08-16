@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Annotated
-
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langchain_core.tools.base import InjectedToolArg
 from pydantic import BaseModel, Field
+from typing import Annotated
 
 from openmanus.topics.mailbox_store import mailbox_store
+
 
 def _config_agent_name(config: RunnableConfig | None) -> str:
     return ((config or {}).get("configurable") or {}).get("agent_name") or "unknown"

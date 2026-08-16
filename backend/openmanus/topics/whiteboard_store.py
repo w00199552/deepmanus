@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import uuid
-
 import aiosqlite
+import uuid
 
 from openmanus.db import get_db_path
 from openmanus.topics.entities import WhiteboardNote
+
 
 def _row_to_note(row: aiosqlite.Row) -> WhiteboardNote:
     return WhiteboardNote(

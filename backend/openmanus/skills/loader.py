@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import os
 import re
-from pathlib import Path
-
 import yaml
+from pathlib import Path
 
 from openmanus.log import logger
 from openmanus.skills.entities import Skill

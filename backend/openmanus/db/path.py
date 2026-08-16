@@ -4,6 +4,7 @@ from pathlib import Path
 
 from openmanus.config import settings
 
+
 def get_db_path() -> str:
     url = settings.database_url
     path = url

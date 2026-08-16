@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import aiosqlite
 import asyncio
 from typing import Awaitable, Callable
-
-import aiosqlite
 
 from openmanus.common.exceptions import ValidationError
 from openmanus.db import get_db_path

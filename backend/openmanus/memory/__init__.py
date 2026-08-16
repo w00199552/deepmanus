@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from pathlib import Path
 from urllib.parse import urlparse
 
-from langgraph.checkpoint.base import BaseCheckpointSaver
-
 from openmanus.config import settings
+
 
 def _is_postgres(url: str) -> bool:
     scheme = urlparse(url).scheme.lower()

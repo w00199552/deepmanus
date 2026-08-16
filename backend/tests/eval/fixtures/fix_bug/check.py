@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def _load_module(workdir: Path):
     search = workdir / "search.py"
     if not search.exists():

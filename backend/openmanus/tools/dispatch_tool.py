@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from typing import Annotated
-
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langchain_core.tools.base import InjectedToolArg
 from pydantic import BaseModel, Field
+from typing import Annotated
 
 from openmanus.agents.loader import agent_loader
 from openmanus.log import logger
 from openmanus.topics.store import session_store, topic_store
+
 
 def _resolve_session_id(config: RunnableConfig | None) -> str:
     from openmanus.agents.agent_factory import resolve_session_id as _resolve

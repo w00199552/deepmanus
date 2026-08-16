@@ -5,6 +5,7 @@ from langchain_core.messages import ToolMessage
 
 from openmanus.middleware.tool_guard import ToolGuardMiddleware
 
+
 class FakeModelRequest:
 
     def __init__(self, tools):
