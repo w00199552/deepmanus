@@ -23,10 +23,10 @@
 
 import {makeAutoObservable, runInAction} from "mobx";
 
+import runtimeService from "@/services/runtime-service.js";
+import topicService from "@/services/topic-service.js";
 import {MessageStore} from "./message-store.js";
 import {StreamClient} from "./stream-client.js";
-
-const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
 
 export class AgentRuntime {
     /** @type {MessageStore} */
@@ -58,7 +58,6 @@ export class AgentRuntime {
 
     constructor() {
         makeAutoObservable(this);
-        if (typeof window !== "undefined") window.__rt = this; // DEBUG
     }
 
     /** Inject the TopicStore (for list unread/preview/status sync). Optional. */
@@ -179,18 +178,9 @@ export class AgentRuntime {
         const ac = new AbortController();
         this._sendAborts[topicId] = ac;
         try {
-            const res = await fetch(
-                `/topics/${encodeURIComponent(topicId)}/messages`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ content: messageText, target_agent: targetAgent }),
-                    signal: ac.signal,
-                }
-            );
-            if (!res.ok) throw new Error(`send failed: ${res.status}`);
+            await runtimeService.postTopicMessage(topicId, messageText, targetAgent, ac.signal);
         } catch (e) {
-            if (e.name === "AbortError") return; // user pressed stop
+            if (e.name === "AbortError" || e.code === "ERR_CANCELED") return; // user pressed stop
             runInAction(() => (this.error = e.message || String(e)));
             this._endRun(topicId);
             return;
@@ -373,11 +363,10 @@ export class AgentRuntime {
     /** Load a topic's merged history into the message store. */
     async _loadTopicHistory(topicId) {
         try {
-            const res = await fetch(`/topics/${encodeURIComponent(topicId)}/history`);
-            if (!res.ok) return;
-            const data = await res.json();
+            const resp = await topicService.getTopicHistory(topicId);
+            const data = resp.result;
             runInAction(() => {
-                this.messageStore.set(topicId, data.messages || []);
+                this.messageStore.set(topicId, data?.messages || []);
             });
         } catch {
             // history not available yet — bucket will fill from live stream

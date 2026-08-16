@@ -45,16 +45,18 @@ const SkillCard = ({skill, onClick}) => {
 const SkillsView = observer(() => {
     const {skillStore} = useStore();
     const [selected, setSelected] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        skillStore.loadSkills();
+        setLoading(true);
+        skillStore.loadSkills().finally(() => setLoading(false));
     }, [skillStore]);
 
     if (selected) {
-        return <SkillDetail name={selected} onBack={() => setSelected(null)}/>;
+        return <SkillDetail name={selected} onBack={() => setSelected(null)} />;
     }
 
-    if (skillStore.loading) return <LoadingState>Loading skills…</LoadingState>;
+    if (loading) return <LoadingState>Loading skills…</LoadingState>;
 
     return (
         <div className="h-full overflow-y-auto">

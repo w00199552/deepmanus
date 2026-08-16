@@ -1,6 +1,7 @@
 import {observer} from "mobx-react-lite";
 import {useEffect, useState} from "react";
 import {AlertCircle, Bot, Check, ChevronLeft, FileText, Save, Sparkles, Wrench,} from "lucide-react";
+import {toast} from "sonner";
 import MDEditor from "@uiw/react-md-editor";
 
 import {useStore} from "@/hooks/use-store.jsx";
@@ -22,6 +23,7 @@ const CreateAgent = observer(({onBack, onCreated}) => {
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [prompt, setPrompt] = useState("");
+    const [creating, setCreating] = useState(false);
     const [selectedTools, setSelectedTools] = useState(new Set());
     const [selectedSkills, setSelectedSkills] = useState(new Set());
 
@@ -49,7 +51,8 @@ const CreateAgent = observer(({onBack, onCreated}) => {
     };
 
     const handleCreate = async () => {
-        if (!name.trim()) return;
+        if (!name.trim() || creating) return;
+        setCreating(true);
         const ok = await s.create(
             name.trim(),
             prompt,
@@ -57,7 +60,11 @@ const CreateAgent = observer(({onBack, onCreated}) => {
             [...selectedSkills],
             description
         );
-        if (ok) onCreated(name.trim());
+        setCreating(false);
+        if (ok) {
+            toast.success(`Agent "${name.trim()}" created`);
+            onCreated(name.trim());
+        }
     };
 
     return (
@@ -115,11 +122,11 @@ const CreateAgent = observer(({onBack, onCreated}) => {
                 <div className="mt-auto p-3">
                     <button
                         onClick={handleCreate}
-                        disabled={!name.trim() || s.saving}
+                        disabled={!name.trim() || creating}
                         className="flex w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 px-3 py-2 text-[13px] text-accent transition hover:bg-accent/25 disabled:opacity-50"
                     >
                         <Save className="size-3.5"/>
-                        {s.saving ? "Creating…" : "Create"}
+                        {creating ? "Creating…" : "Create"}
                     </button>
                 </div>
             </div>

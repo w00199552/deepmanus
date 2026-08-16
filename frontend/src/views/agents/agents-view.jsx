@@ -18,9 +18,11 @@ const AgentsView = observer(() => {
     const {agentStore} = useStore();
     const [selected, setSelected] = useState(null);
     const [createMode, setCreateMode] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        agentStore.loadAgents().then();
+        setLoading(true);
+        agentStore.loadAgents().finally(() => setLoading(false));
     }, [agentStore]);
 
     const builtinAgents = agentStore.agents.filter((a) => a.is_builtin);
@@ -52,7 +54,7 @@ const AgentsView = observer(() => {
         );
     }
 
-    if (agentStore.loading) return <LoadingState>Loading…</LoadingState>;
+    if (loading && agentStore.agents.length === 0) return <LoadingState>Loading…</LoadingState>;
 
     return (
         <div className="h-full overflow-y-auto">

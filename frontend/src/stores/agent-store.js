@@ -1,124 +1,90 @@
 import {makeAutoObservable, runInAction} from "mobx";
-import {toast as sonnerToast} from "sonner";
 
-import {getAgent, listAgents, listSkills, listTools,} from "@/services/agent-service";
+import agentService from "@/services/agent-service.js";
+import skillService from "@/services/skill-service.js";
 
-const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
-
-/**
- * AgentStore — manages agent configurations (list / detail / tools / save).
- * Views call actions here, never services directly.
- */
 export class AgentStore {
-
     agents = [];
     tools = [];
     skills = [];
     current = null;
-    loading = false;
-    saving = false;
     error = null;
 
-    // edit drafts
     promptDraft = "";
     descriptionDraft = "";
     toolDraft = new Set();
     skillDraft = new Set();
-    avatarLoading = false;
-    // bumped after any avatar changes; <Avatar> subscribes and uses it to
-    // cache-bust its <img> URL. Centralized here so callers never pass a
-    // version prop — every avatar on screen refreshes automatically.
     avatarReloadSignal = 0;
-    // bundled avatar presets (offline): [{id, file, seed, url}]
     presetList = [];
     presetListLoaded = false;
-
-    _showToast(type, message) {
-        // sonner manages its own auto-dismiss; no store state needed.
-        if (type === "error") sonnerToast.error(message);
-        else sonnerToast.success(message);
-    }
 
     constructor() {
         makeAutoObservable(this);
     }
 
-    /** Load agent list (metadata only). */
     async loadAgents() {
-        this.loading = true;
         try {
-            const data = await listAgents();
-            console.log(data);
+            const resp = await agentService.listAgents();
             runInAction(() => {
-                this.agents = data;
-                this.loading = false;
+                this.agents = resp.data || [];
             });
-            return data;
+            return this.agents;
         } catch (e) {
             runInAction(() => {
                 this.error = e.message;
-                this.loading = false;
             });
+            return [];
         }
     }
 
-    /** Load all available tools (built-in + user). */
     async loadTools() {
         try {
-            const data = await listTools();
+            const resp = await agentService.listMetaTools();
             runInAction(() => {
-                this.tools = data;
+                this.tools = resp.data || [];
             });
         } catch {
-            /* ignore */
+            /* toast 已由 axios 拦截器处理 */
         }
     }
 
-    /** Load all available skills. */
     async loadSkills() {
         try {
-            const data = await listSkills();
+            const resp = await skillService.listSkills();
             runInAction(() => {
-                this.skills = data;
+                this.skills = resp.data || [];
             });
         } catch {
-            /* ignore */
+            /* toast 已由 axios 拦截器处理 */
         }
     }
 
-    /** Open an agent's detail (loads full config + tools + skills). */
     async selectAgent(name) {
-        this.loading = true;
         try {
-            const [agent, tools, skills] = await Promise.all([
-                getAgent(name),
-                listTools(),
-                listSkills(),
+            const [agentResp, toolsResp, skillsResp] = await Promise.all([
+                agentService.getAgent(name),
+                agentService.listMetaTools(),
+                skillService.listSkills(),
             ]);
             runInAction(() => {
-                this.current = agent;
-                this.tools = tools;
-                this.skills = skills;
-                this.promptDraft = agent.prompt || "";
-                this.descriptionDraft = agent.description || "";
-                this.toolDraft = new Set(agent.tools || []);
-                this.skillDraft = new Set(agent.skills || []);
-                this.loading = false;
+                this.current = agentResp.result;
+                this.tools = toolsResp.data || [];
+                this.skills = skillsResp.data || [];
+                this.promptDraft = this.current?.prompt || "";
+                this.descriptionDraft = this.current?.description || "";
+                this.toolDraft = new Set(this.current?.tools || []);
+                this.skillDraft = new Set(this.current?.skills || []);
             });
         } catch (e) {
             runInAction(() => {
                 this.error = e.message;
-                this.loading = false;
             });
         }
     }
 
-    /** Clear the current detail. */
     clearCurrent() {
         this.current = null;
     }
-
-    // ─── draft mutators (called by view) ────────────────────────────────────
 
     setPromptDraft(text) {
         this.promptDraft = text;
@@ -138,146 +104,84 @@ export class AgentStore {
         else this.skillDraft.add(name);
     }
 
-    // ─── save ────────────────────────────────────────────────────────────────
-
-    /** Save prompt + tools to backend (writes agent.yaml + prompt.md on disk). */
     async save() {
-        if (!this.current) return;
-        this.saving = true;
+        if (!this.current) return false;
         try {
-            const res = await fetch(
-                `${BACKEND}/agents/${encodeURIComponent(this.current.name)}`,
-                {
-                    method: "PUT",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({
-                        prompt: this.promptDraft,
-                        description: this.descriptionDraft,
-                        tools: [...this.toolDraft],
-                        skills: [...this.skillDraft],
-                    }),
-                }
-            );
-            if (!res.ok) throw new Error(`save failed: ${res.status}`);
+            await agentService.updateAgent(this.current.name, {
+                prompt: this.promptDraft,
+                description: this.descriptionDraft,
+                tools: [...this.toolDraft],
+                skills: [...this.skillDraft],
+            });
             await this.selectAgent(this.current.name);
-            this._showToast("success", "Agent saved successfully");
+            return true;
         } catch (e) {
             runInAction(() => {
                 this.error = e.message;
             });
-            this._showToast("error", e.message || "Save failed");
+            return false;
         }
-        runInAction(() => {
-            this.saving = false;
-        });
     }
 
-    /** Load bundled avatar presets (offline). Lazy, cached. */
     async loadAvatarPresets() {
         if (this.presetListLoaded) return this.presetList;
         try {
-            const res = await fetch(`${BACKEND}/agents/avatar-presets`);
-            if (!res.ok) throw new Error(`load presets failed: ${res.status}`);
-            const j = await res.json();
+            const resp = await agentService.listAvatarPresets();
             runInAction(() => {
-                this.presetList = j.presets || [];
+                this.presetList = resp.result?.presets || [];
                 this.presetListLoaded = true;
             });
             return this.presetList;
         } catch (e) {
-            this._showToast("error", e.message || "头像预设加载失败");
+            runInAction(() => {
+                this.error = e.message;
+            });
             return [];
         }
     }
 
-    /**
-     * Apply an avatar preset to the current agent.
-     * @param {string} presetId  e.g. "07"; if omitted, backend picks a random preset
-     */
     async setAvatar(presetId) {
-        if (!this.current || this.avatarLoading) return;
-        runInAction(() => {
-            this.avatarLoading = true;
-        });
+        if (!this.current) return false;
         try {
-            const res = await fetch(
-                `${BACKEND}/agents/${encodeURIComponent(this.current.name)}/avatar/regenerate`,
-                {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    body: JSON.stringify({preset_id: presetId || null}),
-                }
-            );
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.detail || `set avatar failed: ${res.status}`);
-            }
-            const j = await res.json();
+            const resp = await agentService.regenerateAvatar(this.current.name, presetId);
+            const applied = resp.result?.avatar;
             runInAction(() => {
-                // Update local data so cards/lists reflect the new avatar.
-                if (this.current) this.current.avatar = j.avatar;
+                if (this.current && applied) this.current.avatar = applied;
                 const inList = this.agents.find((a) => a.name === this.current?.name);
-                if (inList) inList.avatar = j.avatar;
-                // Bump the signal so every <Avatar> on screen cache-busts.
+                if (inList && applied) inList.avatar = applied;
                 this.avatarReloadSignal++;
             });
-            this._showToast("success", "头像已更新");
-        } catch (e) {
-            this._showToast("error", e.message || "头像更新失败");
-        } finally {
-            runInAction(() => {
-                this.avatarLoading = false;
-            });
-        }
-    }
-
-    /** Create a new agent on disk. Returns true on success. */
-    async create(name, prompt, tools, skills = [], description = "") {
-        this.saving = true;
-        try {
-            const res = await fetch(`${BACKEND}/agents`, {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    name,
-                    prompt,
-                    tools,
-                    skills,
-                    description,
-                }),
-            });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.detail || `create failed: ${res.status}`);
-            }
-            await this.loadAgents();
-            this._showToast("success", `Agent "${name}" created`);
             return true;
         } catch (e) {
-            this._showToast("error", e.message || "Create failed");
+            runInAction(() => {
+                this.error = e.message;
+            });
             return false;
         }
-        runInAction(() => {
-            this.saving = false;
-        });
     }
 
-    /** Delete a custom agent. Returns true on success. */
-    async remove(name) {
+    async create(name, prompt, tools, skills = [], description = "") {
         try {
-            const res = await fetch(
-                `${BACKEND}/agents/${encodeURIComponent(name)}`,
-                {method: "DELETE"}
-            );
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.detail || `delete failed: ${res.status}`);
-            }
+            await agentService.createAgent({name, prompt, tools, skills, description});
             await this.loadAgents();
-            this._showToast("success", `Agent "${name}" deleted`);
             return true;
         } catch (e) {
-            this._showToast("error", e.message || "Delete failed");
+            runInAction(() => {
+                this.error = e.message;
+            });
+            return false;
+        }
+    }
+
+    async remove(name) {
+        try {
+            await agentService.deleteAgent(name);
+            await this.loadAgents();
+            return true;
+        } catch (e) {
+            runInAction(() => {
+                this.error = e.message;
+            });
             return false;
         }
     }

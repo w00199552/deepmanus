@@ -59,16 +59,18 @@ const SectionTitle = ({children}) => {
 const ToolsView = observer(() => {
     const {toolStore} = useStore();
     const [selected, setSelected] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        toolStore.loadTools();
+        setLoading(true);
+        toolStore.loadTools().finally(() => setLoading(false));
     }, [toolStore]);
 
     if (selected) {
         return <ToolDetail name={selected} onBack={() => setSelected(null)} />;
     }
 
-    if (toolStore.loading) return <LoadingState>Loading tools…</LoadingState>;
+    if (loading) return <LoadingState>Loading tools…</LoadingState>;
 
     const builtin = toolStore.tools.filter((t) => t.source === "builtin");
     const user = toolStore.tools.filter((t) => t.source === "user");

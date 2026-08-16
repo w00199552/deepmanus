@@ -3,7 +3,6 @@ import {useEffect} from "react";
 import {PanelRightClose} from "lucide-react";
 
 import {useStore} from "@/hooks/use-store.jsx";
-import {resetTopic} from "@/services/topic-service.js";
 import {ThreadView} from "@/components/chat/thread-view.jsx";
 import {ChatInput} from "@/components/chat/chat-input.jsx";
 import {TooltipProvider} from "@/components/ui/tooltip.jsx";
@@ -33,7 +32,7 @@ export const ChatPane = observer(function ChatPane({onToggleCollapse}) {
     /** "New chat" = reset the main topic's history (clear checkpoints + messages). */
     const handleNewChat = async () => {
         // 1. Backend: clear all checkpoints + sessions in this topic
-        await resetTopic(topicId).catch(() => {
+        await topics.reset(topicId).catch(() => {
         });
         // 2. Frontend: clear the topic's messages (keyed by topicId)
         runtime.clear(topicId);

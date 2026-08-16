@@ -1,29 +1,29 @@
-/**
- * Topic service — the ONLY place that talks to the /topics backend.
- * Views go through topic-store actions → these functions. Never call directly.
- */
+import axios from "@/services/axios.js";
 
-/** List all topics (newest first), with latest session info merged in. */
-export async function listTopics() {
-    const res = await fetch("/topics");
-    if (!res.ok) throw new Error(`listTopics: ${res.status}`);
-    return res.json();
+class TopicService {
+    service = import.meta.env.VITE_BACKEND_URL;
+
+    async listTopics() {
+        return await axios.get(`${this.service}/topics`);
+    }
+
+    async deleteTopic(topicId) {
+        return await axios.delete(`${this.service}/topics/${encodeURIComponent(topicId)}`);
+    }
+
+    async resetTopic(topicId) {
+        return await axios.post(`${this.service}/topics/${encodeURIComponent(topicId)}/reset`);
+    }
+
+    async cdTopic(topicId, path) {
+        return await axios.post(`${this.service}/topics/${encodeURIComponent(topicId)}/cd`, {
+            path
+        });
+    }
+
+    async getTopicHistory(topicId) {
+        return await axios.get(`${this.service}/topics/${encodeURIComponent(topicId)}/history`);
+    }
 }
 
-/** Delete a topic and all its data (sessions/checkpoints/whiteboard/mailbox). */
-export async function deleteTopic(id) {
-    const res = await fetch(`/topics/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-    });
-    if (!res.ok) throw new Error(`deleteTopic: ${res.status}`);
-    return res.json();
-}
-
-/** Reset a topic's history (clear all checkpoints + sessions). Topic stays. */
-export async function resetTopic(id) {
-    const res = await fetch(`/topics/${encodeURIComponent(id)}/reset`, {
-        method: "POST",
-    });
-    if (!res.ok) throw new Error(`resetTopic: ${res.status}`);
-    return res.json();
-}
+export default new TopicService();

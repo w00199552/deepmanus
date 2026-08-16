@@ -1,4 +1,4 @@
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {observer} from "mobx-react-lite";
 import {ChevronLeft, Lock, Wrench} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
@@ -12,12 +12,14 @@ import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 const ToolDetail = observer(({name, onBack}) => {
     const {toolStore: s} = useStore();
     const {isDark} = useTheme();
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        s.loadToolDetail(name);
+        setLoading(true);
+        s.loadToolDetail(name).finally(() => setLoading(false));
     }, [name, s]);
 
-    if (s.detailLoading) return <LoadingState>Loading…</LoadingState>;
+    if (loading && !s.detailTree) return <LoadingState>Loading…</LoadingState>;
 
     // Built-in tools have no source files (tree endpoint 404s).
     if (s.detailNotFound) {

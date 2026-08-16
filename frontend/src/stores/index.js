@@ -1,9 +1,11 @@
-import {TopicStore} from "./topic-store";
-import {AgentStore} from "./agent-store";
-import {SkillStore} from "./skill-store";
-import {ToolStore} from "./tool-store";
-import {SandboxStore} from "./sandbox-store";
-import {AgentRuntime} from "@/runtime/agent-runtime";
+import {createContext, createElement} from "react";
+
+import {TopicStore} from "@/stores/topic-store.js";
+import {AgentStore} from "@/stores/agent-store.js";
+import {SkillStore} from "@/stores/skill-store.js";
+import {ToolStore} from "@/stores/tool-store.js";
+import {SandboxStore} from "@/stores/sandbox-store.js";
+import {AgentRuntime} from "@/runtime/agent-runtime.js";
 
 export class RootStore {
     topics;
@@ -26,5 +28,10 @@ export class RootStore {
     }
 }
 
-/** Process-wide singleton. */
 export const rootStore = new RootStore();
+
+export const MobxContext = createContext(rootStore);
+
+export function StoreProvider({children}) {
+    return createElement(MobxContext.Provider, {value: rootStore}, children);
+}

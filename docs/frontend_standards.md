@@ -1,1081 +1,1283 @@
-# 后端开发规范
+# 前端开发规范
 
-> 本文档定义 OpenManus 后端代码的模块化结构、分层职责、命名约定和类型系统。
-> 所有后端开发必须遵循以下规范，确保代码一致性、类型安全和可维护性。
-
----
-
-## 1. 垂直领域模块化
-
-**每个领域模块包含自己的分层文件，消除 `api/` 中间层。**
-
-### 标准目录结构
-
-```
-module/
-├── entities.py    # Pydantic 模型（请求/响应/内部实体）
-├── service.py     # 或 loader.py — 业务逻辑
-├── routers.py     # REST 层（FastAPI router）
-├── store.py       # DB 存储（如需要）
-└── __init__.py    # 必须导出关键类/函数，不能留空
-```
-
-### 示例：tools/ 模块完整结构
-
-```
-tools/
-├── __init__.py        # 导出 ToolLoader、Tool
-├── entities.py        # Tool、FileNode、ToolFile
-├── tool_loader.py     # ToolLoader（业务逻辑 + 加载）
-├── routers.py         # /tools 路由
-├── dispatch_tool.py   # deepagents dispatch 工具
-├── mailbox_tools.py   # 邮箱工具
-└── whiteboard_tool.py # 白板工具
-```
-
-### 每个文件的职责
-
-| 文件 | 职责 | 依赖方向 |
-|------|------|---------|
-| `entities.py` | 定义 Pydantic 模型，无业务逻辑 | 被所有文件依赖 |
-| `service.py` / `loader.py` | 业务逻辑，操作 DB / 文件系统 | 依赖 entities / store |
-| `routers.py` | HTTP 入口，调用 service/loader | 依赖 service / entities / common.response |
-| `store.py` | 纯 DB CRUD，不包含业务语义 | 依赖 entities / db |
-| `__init__.py` | 重新导出模块公开 API | 依赖模块内部文件 |
+> 本文档定义 OpenManus 前端代码的组织结构、数据流、命名约定、样式系统和组件设计模式。
+> 所有前端开发必须遵循以下规范，确保代码一致性、可维护性和类型安全。
 
 ---
 
-## 2. Router 层规范
+## 1. 单向数据流
 
-**Router 保持薄层，业务逻辑在 service/loader 中。禁止 `raise HTTPException`。**
+**只允许 `view → store → service` 的调用链路，禁止 `view → service` 直接调用。**
 
 ### 正确示例
 
-```python
-# tools/routers.py
-from openmanus.common.response import ApiResponse, ApiListResponse
-from openmanus.tools.tool_loader import tool_loader
+```javascript
+// ✅ 正确
+const AgentsView = observer(() => {
+    const {agentStore} = useStore();
+    useEffect(() => {
+        agentStore.loadAgents();
+    }, []);
+    return <div>{agentStore.agents.map(...)}</div>;
+});
 
-router = APIRouter(prefix="/tools", tags=["tools"])
-
-@router.get("", response_model=ApiListResponse)
-async def list_tools():
-    """List all tools."""
-    try:
-        tools = tool_loader.list_tools()
-        return ApiListResponse.ok(data=tools, total=len(tools))
-    except Exception as e:
-        return ApiListResponse.fail(message=str(e))
-
-@router.get("/{name}", response_model=ApiResponse)
-async def get_tool(name: str):
-    """Get a single tool by name."""
-    try:
-        tool = tool_loader.get(name)
-        if tool is None:
-            return ApiResponse.fail(message="tool not found")
-        return ApiResponse.ok(tool)
-    except Exception as e:
-        return ApiResponse.fail(message=str(e))
+// stores/agent-store.js
+class AgentStore {
+    async loadAgents() {
+        const resp = await agentService.listAgents();
+        runInAction(() => {
+            this.agents = resp.data || [];
+        });
+    }
+}
 ```
 
 ### 错误示例
 
-```python
-# ❌ 错误 - 在 router 中直接 raise HTTPException
-@router.get("/{name}")
-async def get_tool(name: str):
-    tool = tool_loader.get(name)
-    if not tool:
-        raise HTTPException(status_code=404, detail="not found")  # ❌
-    return tool
-
-# ❌ 错误 - 在 router 中编写业务逻辑
-@router.get("")
-async def list_tools():
-    tools = []
-    for f in Path("~/.openmanus/tools").iterdir():  # ❌ 直接操作文件系统
-        tools.append(parse_tool(f))
-    return tools
+```javascript
+// ❌ 错误 - view 直接调用 service
+const AgentsView = () => {
+    const [agents, setAgents] = useState([]);
+    useEffect(() => {
+        agentService.listAgents().then(resp => setAgents(resp.data));
+    }, []);
+};
 ```
 
 ---
 
-## 3. 导入规则
+## 2. 数据状态管理
 
-**全部使用 `from openmanus.xxx` 绝对导入，禁止相对导入。**
+**对象数据** → store 层管理
+- 多个组件共用的数据（如 topics、agents）
+- 需要持久化的业务数据
+- 跨页面共享的状态
+
+**交互状态数据** → view 层管理（通过 `useState` hook）
+- loading / saving 等加载状态
+- 表单输入的临时状态
+- UI 交互状态（展开/折叠、选中项等）
+
+### 正确示例
+
+```javascript
+// ✅ 对象数据在 store，交互状态在 view
+class AgentStore {
+    agents = [];         // ✅ 共享数据
+    current = null;      // ✅ 业务数据
+    
+    async loadAgents() {
+        const resp = await agentService.listAgents();
+        runInAction(() => {
+            this.agents = resp.data || [];
+        });
+    }
+}
+
+const AgentsView = observer(() => {
+    const {agentStore} = useStore();
+    const [loading, setLoading] = useState(false);  // ✅ 交互状态
+    
+    useEffect(() => {
+        setLoading(true);
+        agentStore.loadAgents().finally(() => setLoading(false));
+    }, []);
+});
+```
+
+### 错误示例
+
+```javascript
+// ❌ 把 loading 放在 store 中
+class AgentStore {
+    agents = [];
+    loading = false;     // ❌ loading 是 UI 交互状态，不属于 store
+}
+
+// ❌ 把共享数据放在 view
+const TopicListView = () => {
+    const [topics, setTopics] = useState([]);  // ❌ topics 是共享数据
+};
+```
+
+---
+
+## 3. ES6 语法与导入规范
+
+**全部使用 ES6+ 语法。导入按分组排序，使用 `@/` 路径别名。**
+
+### ES6 语法要求
+
+| 语法 | 正确 | 错误 |
+|------|------|------|
+| 变量声明 | `const` / `let` | `var` |
+| 组件 | 箭头函数 `const X = () => {}` | `function X() {}` |
+| 导出 | `export default` / `export const` | `module.exports` |
+| 解构 | `const {a, b} = obj` | `obj.a; obj.b` |
+| 模板字面量 | `` `Hello ${name}` `` | `"Hello " + name` |
+| 可选链 | `user?.name` | `user && user.name` |
 
 ### 导入顺序
 
-按以下三组排序，组间空一行：
+按以下四组排序，组间空一行：
 
-1. **Python 标准库**：`os`、`sys`、`pathlib`、`json`、`asyncio`、`uuid` ...
-2. **第三方库**：`fastapi`、`pydantic`、`aiosqlite`、`loguru` ...
-3. **项目内部**：`openmanus.config`、`openmanus.common.response` ...
+1. **React 核心**：`react`、`react-dom`、`react-router-dom`
+2. **第三方库**：`mobx`、`axios`、`lucide-react`、`sonner`
+3. **项目内部**：`@/stores/`、`@/services/`、`@/components/`、`@/hooks/`、`@/utils/`
+4. **样式**：`@/index.css`、组件样式
 
 ### 正确示例
 
-```python
-# ✅ 标准库
-from __future__ import annotations
+```javascript
+// ✅ React 核心
+import {observer} from "mobx-react-lite";
+import {useEffect, useState} from "react";
+import {useNavigate} from "react-router-dom";
 
-import json
-import uuid
-from pathlib import Path
-from typing import Any
+// ✅ 第三方库
+import {Bot, Lock, Wrench} from "lucide-react";
 
-# ✅ 第三方库
-import aiosqlite
-from fastapi import APIRouter
-from pydantic import BaseModel, Field
+// ✅ 项目内部
+import {useStore} from "@/hooks/use-store.jsx";
+import {AgentAvatar} from "@/components/avatar.jsx";
+import {FancyButton} from "@/components/ui/fancy-button.jsx";
 
-# ✅ 项目内部
-from openmanus.common.response import ApiResponse, ApiListResponse
-from openmanus.config import settings
-from openmanus.db import get_db_path
+// ✅ 样式（如有）
+import "@/index.css";
 ```
 
 ### 错误示例
 
-```python
-# ❌ 相对导入
-from .entities import Tool
-from ..common.response import ApiResponse
+```javascript
+// ❌ 导入顺序混乱
+import {FancyButton} from "@/components/ui/fancy-button.jsx";
+import {useEffect} from "react";
+import {Bot} from "lucide-react";
+import {useStore} from "@/hooks/use-store.jsx";
 
-# ❌ 导入顺序混乱
-from openmanus.config import settings
-import json
-from fastapi import APIRouter
-from pathlib import Path
+// ❌ 使用相对路径
+import {AgentAvatar} from "../../components/avatar.jsx";  // ❌ 应使用 @/
 
-# ❌ wildcard 导入
-from openmanus.common.response import *
-```
-
-### 例外
-
-`__init__.py` 中的重新导出允许使用相对导入：
-
-```python
-# openmanus/tools/__init__.py
-from openmanus.tools.tool_loader import ToolLoader  # ✅ 仍然用绝对导入
-from openmanus.tools.entities import Tool, FileNode, ToolFile
-
-__all__ = ["ToolLoader", "Tool", "FileNode", "ToolFile"]
+// ❌ wildcard 导入
+import * as React from "react";  // ❌
 ```
 
 ---
 
-## 4. 命名规则
+## 4. Service 层与错误处理
 
-### 公开函数
+**Service 层仅封装 HTTP 调用，不包含业务逻辑。错误通过 axios 拦截器统一 toast 提示。**
 
-使用动词开头，语义清晰：
+### Service 标准格式
 
-| 前缀 | 用途 | 示例 |
-|------|------|------|
-| `get_` | 获取单个对象 | `get_db_path()`、`get_checkpointer()` |
-| `list_` | 获取列表 | `list_tools()`、`list_topics()` |
-| `create_` | 创建 | `create_session()` |
-| `update_` | 更新 | `update_workdir()` |
-| `delete_` | 删除 | `delete_topic()` |
-| `build_` | 构建/组装 | `build_agent()` |
-| `compute_` | 计算 | `compute_thread_id()` |
-| `setup_` | 初始化配置 | `setup_logger()` |
+```javascript
+// services/tool-service.js
+import axios from "@/services/axios.js";
 
-### 私有函数
+class ToolService {
+    service = import.meta.env.VITE_BACKEND_URL;
 
-以 `_` 开头，且**不得被外部模块引用**：
+    async listTools() {
+        return await axios.get(`${this.service}/tools`);
+    }
 
-```python
-# ✅ 正确 - 只在模块内部使用
-def _row_to_topic(row: aiosqlite.Row) -> Topic: ...
+    async getToolTree(name) {
+        return await axios.get(`${this.service}/tools/${name}/tree`);
+    }
 
-# ❌ 错误 - 以 _ 开头但被外部引用
-# db/path.py
-def _db_path() -> str: ...
+    async getToolFile(name, path) {
+        return await axios.get(`${this.service}/tools/${name}/file`, {
+            params: {path}
+        });
+    }
+}
 
-# topics/topic_store.py
-from openmanus.db import _db_path  # ❌ 引用了私有函数
+export default new ToolService();
+```
+
+### Axios 拦截器统一错误提示
+
+**错误信息通过 shadcn/ui 的 sonner 组件统一 toast，无需在各 view 中手动处理网络错误。**
+
+```javascript
+// services/axios.js
+import Axios from "axios";
+import {toast} from "sonner";
+
+const axios = Axios.create({
+    baseURL: import.meta.env.VITE_BACKEND_URL,
+    timeout: 30000,
+});
+
+// Response interceptor
+axios.interceptors.response.use(
+    (response) => response.data,  // ✅ 自动解包 response.data
+    (error) => {
+        const msg = error.response?.data?.error?.message
+            || error.response?.data?.detail
+            || error.response?.data?.message
+            || error.message
+            || "Network error";
+        
+        toast.error(msg);  // ✅ 统一错误 toast
+        return Promise.reject(error);
+    },
+);
+
+export default axios;
+```
+
+### 错误提示规则
+
+| 场景 | 处理方式 | 执行者 |
+|------|---------|--------|
+| 网络/服务端错误 | `toast.error(msg)` | axios 拦截器（自动） |
+| 业务校验失败 | `toast.error(msg)` | axios 拦截器（自动） |
+| 操作成功提示 | `toast.success(msg)` | View 层（自主决策） |
+| 操作确认提示 | `toast.info(msg)` | View 层（自主决策） |
+
+### Store 层错误处理
+
+Store 层 **不** 处理 UI 提示，只捕获和存储错误状态：
+
+```javascript
+// ✅ 正确 - Store 只存储错误状态
+class TopicStore {
+    error = null;
+    
+    async load() {
+        this.error = null;
+        try {
+            const resp = await topicService.listTopics();
+            runInAction(() => { this.topics = resp.data || []; });
+        } catch (e) {
+            // toast 已由 axios 拦截器处理，Store 只存储错误状态
+            runInAction(() => { this.error = e.message; });
+        }
+    }
+}
+
+// ❌ 错误 - Store 中调用 toast
+class TopicStore {
+    async load() {
+        try {
+            // ...
+        } catch (e) {
+            toast.error(e.message);  // ❌ 不应由 Store 处理 UI 提示
+        }
+    }
+}
 ```
 
 ---
 
-## 5. 返回类型
+## 5. Store 层规范
 
-**所有 loader/service/store 方法返回 Pydantic 对象，禁止返回裸 `dict`。**
+**使用 MobX observable store，`makeAutoObservable` 管理响应式状态。异步操作使用 `runInAction` 更新状态。**
 
-### 正确示例
+### Store 标准格式
 
-```python
-# ✅ 返回 Pydantic 对象
-class TopicStore:
-    @classmethod
-    async def get(cls, topic_id: str) -> Topic | None:
-        async with aiosqlite.connect(get_db_path()) as db:
-            db.row_factory = aiosqlite.Row
-            cur = await db.execute("SELECT * FROM topics WHERE id = ?", (topic_id,))
-            row = await cur.fetchone()
-            return _row_to_topic(row) if row else None
+```javascript
+import {makeAutoObservable, runInAction} from "mobx";
+import topicService from "@/services/topic-service.js";
 
-def _row_to_topic(row: aiosqlite.Row) -> Topic:
-    return Topic(
-        id=row["id"],
-        title=row["title"],
-        workdir=row["workdir"],
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
-    )
+class TopicStore {
+    topics = [];
+    activeTopicId = null;
+
+    constructor() {
+        makeAutoObservable(this);
+    }
+
+    get active() {
+        return this.topics.find((t) => t.id === this.activeTopicId) || null;
+    }
+
+    async load() {
+        try {
+            const resp = await topicService.listTopics();
+            runInAction(() => {
+                this.topics = resp.data || [];
+            });
+        } catch (e) {
+            // toast 已由 axios 拦截器处理
+            runInAction(() => { this.error = e.message; });
+        }
+    }
+}
+
+export default TopicStore;
 ```
 
-### 错误示例
-
-```python
-# ❌ 返回裸 dict
-class TopicStore:
-    @classmethod
-    async def get(cls, topic_id: str) -> dict[str, Any] | None:
-        async with aiosqlite.connect(get_db_path()) as db:
-            db.row_factory = aiosqlite.Row
-            cur = await db.execute("SELECT * FROM topics WHERE id = ?", (topic_id,))
-            row = await cur.fetchone()
-            return dict(row) if row else None  # ❌
-```
-
-### 特例排除清单
-
-以下场景允许返回 `dict`，需在 docstring 中注明原因：
-
-| 场景 | 原因 | 示例 |
-|------|------|------|
-| LangGraph `RunnableConfig` | 框架要求 dict 格式 | `AgentContext.to_config() -> dict[str, Any]` |
-| FastAPI SSE 事件帧 | SSE 协议需要裸 JSON dict | `event_schema.ev_text_delta() -> dict[str, Any]` |
-| `_row_to_*` 辅助函数 | 仅供模块内部 row→entity 转换 | `_row_to_topic() -> Topic`（已返回 Pydantic） |
-
----
-
-## 6. 统一响应包装
-
-**所有 router 必须通过 `ApiResponse` / `ApiListResponse` 包装返回值。**
-
-### 响应结构
-
-| 封装类 | 字段结构 | 适用场景 |
-|--------|---------|---------|
-| `ApiResponse[T]` | `{ result: T, error?: ApiError }` | 单对象操作 |
-| `ApiListResponse[T]` | `{ data: list[T], total: int, error?: ApiError }` | 列表查询 |
-| `ApiError` | `{ message: str }` | 错误信息 |
-
-### 使用方式
-
-```python
-from openmanus.common.response import ApiResponse, ApiListResponse
-
-# 列表接口
-tools = tool_loader.list_tools()
-return ApiListResponse.ok(data=tools, total=len(tools))
-
-# 单对象接口 - 成功
-return ApiResponse.ok(tool)
-
-# 单对象接口 - 失败
-return ApiResponse.fail(message="tool not found")
-
-# 列表接口 - 失败
-return ApiListResponse.fail(message="internal error")
-```
-
-### Router 声明
-
-每个路由必须声明 `response_model`：
-
-```python
-@router.get("", response_model=ApiListResponse)
-@router.get("/{name}", response_model=ApiResponse)
-@router.delete("/{topic_id}", response_model=ApiResponse)
-```
-
----
-
-## 7. Store 层模式
-
-**Store 类全部使用 `@classmethod`，无需实例化。DB 连接使用 `aiosqlite.connect(get_db_path())`。**
-
-### 标准格式
-
-```python
-import aiosqlite
-from openmanus.db import get_db_path
-
-class TopicStore:
-    """CRUD for topics.
-
-    All methods are classmethod — no instance creation needed.
-    """
-
-    @classmethod
-    async def get(cls, topic_id: str) -> Topic | None:
-        """Get a topic by ID.
-
-        Args:
-            topic_id: Topic identifier.
-
-        Returns:
-            Topic object, or None if not found.
-        """
-        async with aiosqlite.connect(get_db_path()) as db:
-            db.row_factory = aiosqlite.Row
-            cur = await db.execute(
-                "SELECT * FROM topics WHERE id = ?", (topic_id,)
-            )
-            row = await cur.fetchone()
-            return _row_to_topic(row) if row else None
-
-    @classmethod
-    async def list_topics(cls) -> list[Topic]:
-        """List all topics, newest first.
-
-        Returns:
-            List of Topic objects.
-        """
-        async with aiosqlite.connect(get_db_path()) as db:
-            db.row_factory = aiosqlite.Row
-            cur = await db.execute(
-                "SELECT * FROM topics ORDER BY updated_at DESC"
-            )
-            rows = await cur.fetchall()
-            return [_row_to_topic(r) for r in rows]
-```
-
----
-
-## 8. 对象定义（Pydantic 优先）
-
-**优先使用 Pydantic `BaseModel` 定义对象，禁止使用 `dataclass`。所有字段使用 `Field()` 定义，包括 default 和 description。description 使用中文。**
-
-### 正确示例
-
-```python
-from typing import Optional
-from pydantic import BaseModel, Field
-
-class Topic(BaseModel):
-    id: Optional[str] = Field(default=None, description="ID")
-    title: Optional[str] = Field(default=None, description="标题")
-    workdir: Optional[str] = Field(default=None, description="工作目录")
-    kind: str = Field(default="root", description="类型")
-    status: str = Field(default="active", description="状态")
-    agents: list[str] = Field(default_factory=list, description="agent名称列表")
-    created_at: Optional[str] = Field(default=None, description="创建时间")
-    updated_at: Optional[str] = Field(default=None, description="更新时间")
-
-class CdBody(BaseModel):
-    path: str = Field(default="", description="CD进入的目录路径")
-```
-
-### 错误示例
-
-```python
-# ❌ 使用 dataclass
-from dataclasses import dataclass
-
-@dataclass(frozen=True)
-class AgentContext:
-    session_id: str
-    topic_id: str
-
-# ❌ 字段缺少 Field() 和 description
-class Tool(BaseModel):
-    name: str                  # ❌ 无 Field()、无 description
-    description: str = ""      # ❌ 直接赋默认值
-    source: str = "user"       # ❌
-```
-
-### Field 规范
-
-| 场景 | 写法 |
-|------|------|
-| 必填字段 | `name: str = Field(description="名称")` |
-| 可选字段 | `title: Optional[str] = Field(default=None, description="标题")` |
-| 带默认值 | `kind: str = Field(default="root", description="类型")` |
-| 列表默认值 | `agents: list[str] = Field(default_factory=list, description="列表")` |
-| 计算字段 | `@computed_field @property def avatar_url(self) -> Optional[str]:` |
-
----
-
-## 9. 注释风格
-
-**采用 Google 风格 docstring，包含 Summary / Args / Returns / Raises。**
-
-### 函数/方法
-
-```python
-async def reset_topic(cls, topic_id: str) -> bool:
-    """Reset a topic's conversation history.
-
-    Clear all checkpoints and sessions in the specified topic.
-    The topic itself (row in topics table) is preserved.
-
-    Args:
-        topic_id: The topic identifier to reset.
-
-    Returns:
-        True if reset was successful.
-
-    Raises:
-        OpenManusError: If the topic does not exist.
-    """
-```
-
-### 类
-
-```python
-class TopicStore:
-    """CRUD for topics (task/conversation groups).
-
-    All methods are classmethod — no instance creation needed.
-    DB connections are opened per-call via aiosqlite.connect().
-    """
-```
-
-### 模块
-
-```python
-"""TopicStore — CRUD for topics (task/conversation groups).
-
-Tables:
-    topics — one row per task/conversation group.
-"""
-```
-
-### 格式要求
-
-| 元素 | 要求 |
-|------|------|
-| Summary | 首行简短描述，首字母大写，句号结尾 |
-| Args | 每个参数一行，`名称: 描述。` |
-| Returns | 描述返回值类型和含义 |
-| Raises | 列出可能抛出的异常类和原因 |
-| 空行 | Summary 与 Args 之间空一行 |
-
----
-
-## 10. 类型注解
-
-**除 routers 外，所有函数/方法必须定义参数类型和返回类型。routers 由 FastAPI 自动推导，只要求声明 `response_model`。**
-
-### 正确示例
-
-```python
-# ✅ service/loader/store — 完整类型注解
-def list_tools(self) -> list[Tool]:
-    ...
-
-async def get_topic_history(cls, topic_id: str) -> TopicHistory:
-    ...
-
-def _row_to_topic(row: aiosqlite.Row) -> Topic:
-    ...
-
-# ✅ router — 只要求 response_model，不要求返回类型注解
-@router.get("", response_model=ApiListResponse)
-async def list_tools():
-    tools = tool_loader.list_tools()
-    return ApiListResponse.ok(data=tools, total=len(tools))
-```
-
-### 错误示例
-
-```python
-# ❌ 缺少返回类型
-def list_tools(self):         # ❌ 无返回类型
-    ...
-
-# ❌ 缺少参数类型
-async def get(self, topic_id):  # ❌ 参数无类型
-    ...
-
-# ❌ router 有多余的类型注解（不禁止，但不是必须的）
-@router.get("", response_model=ApiListResponse)
-async def list_tools() -> ApiListResponse:  # 冗余，response_model 已声明
-    ...
-```
-
-### 类型注解使用 Python 3.12+ 语法
-
-```python
-# ✅ Python 3.12+ 内建类型
-def list_items() -> list[Topic]: ...
-def get_mapping() -> dict[str, Any]: ...
-def get_one() -> Topic | None: ...
-
-# ❌ 使用 typing 旧语法
-from typing import List, Dict, Optional
-def list_items() -> List[Topic]: ...   # ❌
-def get_one() -> Optional[Topic]: ...  # ❌
-```
-
----
-
-## 11. 错误处理
-
-**使用自定义异常层级，禁止 bare except，使用异常链保留上下文。**
-
-### 自定义异常层级
-
-```python
-# openmanus/common/exceptions.py
-class OpenManusError(Exception):
-    """Base exception for all OpenManus application errors."""
-    pass
-
-class NotFoundError(OpenManusError):
-    """Raised when a requested resource is not found."""
-    pass
-
-class ValidationError(OpenManusError):
-    """Raised when input validation fails."""
-    pass
-
-class TopicDeleteError(OpenManusError):
-    """Raised when a topic cannot be deleted (e.g. 'main' topic)."""
-    pass
-```
-
-### 正确示例
-
-```python
-# ✅ 抛出特定异常
-async def delete_topic(cls, topic_id: str) -> bool:
-    if topic_id == MAIN_TOPIC_ID:
-        raise TopicDeleteError("main topic cannot be deleted")
-    topic = await TopicStore.get(topic_id)
-    if not topic:
-        raise NotFoundError(f"topic not found: {topic_id}")
-    ...
-
-# ✅ 异常链 — 保留原始 traceback
-async def load_config(path: str) -> Config:
-    try:
-        with open(path) as f:
-            return Config.from_json(f.read())
-    except FileNotFoundError as e:
-        raise OpenManusError(f"Config file not found: {path}") from e
-    except json.JSONDecodeError as e:
-        raise ValidationError(f"Invalid JSON in config: {path}") from e
-
-# ✅ 特定异常捕获
-try:
-    await checkpointer.adelete_thread(thread_id)
-except (OSError, aiosqlite.Error) as e:
-    logger.warning("Failed to delete thread %s: %s", thread_id, e)
-```
-
-### 错误示例
-
-```python
-# ❌ bare except
-try:
-    await risky_operation()
-except:                    # ❌ 捕获所有异常包括 KeyboardInterrupt
-    pass
-
-# ❌ 吞没异常
-try:
-    await risky_operation()
-except Exception:
-    pass                  # ❌ 无日志、无处理
-
-# ❌ 丢失异常上下文
-try:
-    parsed = json.loads(data)
-except json.JSONDecodeError as e:
-    raise ValueError(f"Parse failed")  # ❌ 缺少 from e
-
-# ❌ 抛出裸 Exception
-raise Exception("topic not found")  # ❌ 应使用 NotFoundError
-```
-
-### Router 中的异常处理
-
-Router 层统一用 `try/except Exception` + `ApiResponse.fail()`，这是唯一允许宽泛捕获的地方：
-
-```python
-@router.get("/{name}", response_model=ApiResponse)
-async def get_tool(name: str):
-    try:
-        tool = tool_loader.get(name)
-        if tool is None:
-            return ApiResponse.fail(message="tool not found")
-        return ApiResponse.ok(tool)
-    except Exception as e:
-        return ApiResponse.fail(message=str(e))
-```
-
----
-
-## 12. 异步编程
-
-**I/O 操作必须使用 `async def`，禁止在异步端点中调用阻塞操作。**
-
-### 规则
+### MobX 规则
 
 | 规则 | 说明 |
 |------|------|
-| `async def` 用于 I/O | DB 查询、HTTP 请求、文件读写 |
-| 同步端点用 `def` | 纯计算、无 I/O 的简单操作 |
-| 禁止阻塞调用 | 不在 async 函数中使用 `requests`、`time.sleep()`、同步文件 I/O |
-| 禁止混用 | 不在 async 函数中直接调用同步 I/O 函数 |
+| `makeAutoObservable` | Store 构造函数中调用，自动追踪所有属性 |
+| `runInAction` | async 函数中更新 observable 必须包裹在 `runInAction` 中 |
+| `get` 计算属性 | 不需要 `runInAction`，MobX 自动追踪 |
+| 单例 | service 类用 `export default new XxxService()`，store 类由 `StoreProvider` 管理 |
+
+---
+
+## 6. View 层组件拆分
+
+**View 层只负责 UI 渲染和交互状态，业务数据通过 store 获取。按职责拆分为容器组件和展示组件。**
+
+### 组件拆分原则
+
+| 组件类型 | 职责 | 可使用 |
+|----------|------|--------|
+| 容器组件 | 数据获取、路由、store 交互 | store、useEffect、router |
+| 展示组件 | 纯 UI 渲染 | props、useState（交互状态） |
+| 页面组件 | 页面布局 + 容器组合 | 容器组件 + 展示组件 |
 
 ### 正确示例
 
-```python
-# ✅ 异步 DB 操作
-async def get(cls, topic_id: str) -> Topic | None:
-    async with aiosqlite.connect(get_db_path()) as db:
-        cur = await db.execute("SELECT * FROM topics WHERE id = ?", (topic_id,))
-        row = await cur.fetchone()
-        return _row_to_topic(row) if row else None
+```javascript
+// ✅ 容器组件 — 拥有数据
+const AgentsView = observer(() => {
+    const {agentStore} = useStore();
+    const navigate = useNavigate();
 
-# ✅ 同步计算函数 — 不需要 async
-def compute_thread_id(topic_id: str, agent_name: str) -> str:
-    return f"{topic_id}:{agent_name}"
+    useEffect(() => {
+        agentStore.loadAgents().then();
+    }, [agentStore]);
+
+    return (
+        <div>
+            {agentStore.agents.map((a) => (
+                <AgentCard key={a.name} agent={a} onClick={() => navigate(a.name)}/>
+            ))}
+        </div>
+    );
+});
+
+// ✅ 展示组件 — 纯渲染
+const AgentCard = ({agent, onClick}) => {
+    return (
+        <button onClick={onClick} className="rounded-card p-6">
+            <AgentAvatar agent={agent} size={44}/>
+            <span>{agent.name}</span>
+        </button>
+    );
+};
 ```
 
-### 错误示例
+### 复杂度阈值
 
-```python
-# ❌ 在 async 函数中使用同步阻塞调用
-async def fetch_data(url: str) -> dict:
-    import requests
-    resp = requests.get(url)  # ❌ 阻塞！应使用 httpx.AsyncClient
-    return resp.json()
+| 指标 | 阈值 | 超出时的处理 |
+|------|------|-------------|
+| 组件函数体 | ≤ 80 行 | 拆分子组件 |
+| 嵌套层级 | ≤ 4 层 | 提前 return / 提取子组件 |
+| Props 数量 | ≤ 6 个 | 合并为对象 prop |
+| 文件行数 | ≤ 400 行 | 拆分为多个组件文件 |
 
-# ❌ 在 async 函数中使用 time.sleep
-async def retry_operation():
-    import time
-    time.sleep(5)  # ❌ 阻塞事件循环！应使用 asyncio.sleep(5)
+---
 
-# ❌ 给纯计算函数加 async
-async def compute_hash(data: str) -> str:
-    return hashlib.sha256(data.encode()).hexdigest()  # ❌ 无 I/O，不需要 async
+## 7. 自定义 Hook
+
+**Hook 文件使用 `use-xxx.jsx` 命名，导出 `useXxx` 函数。**
+
+### 标准格式
+
+```javascript
+// hooks/use-store.jsx
+import {useContext} from "react";
+import {MobxContext} from "@/stores/index.js";
+
+export function useStore() {
+    const context = useContext(MobxContext);
+    if (!context) throw new Error("useStore must be used within StoreProvider");
+    return context;
+}
+
+export const StoreProvider = MobxContext.Provider;
+```
+
+### Hook 规则
+
+| 规则 | 说明 |
+|------|------|
+| 命名 | `use-xxx.jsx` 文件，`useXxx` 函数名 |
+| 只在最顶层调用 | 不在循环、条件、嵌套函数中调用 |
+| 只在组件/其他 Hook 中调用 | 不在普通 JS 函数中调用 |
+| useEffect 依赖完整 | 不遗漏依赖项 |
+| useEffect 目的正确 | 仅用于外部系统同步，不用于数据转换 |
+
+---
+
+## 8. Axios 实例与拦截器
+
+**全局唯一 axios 实例，统一配置 baseURL、timeout 和拦截器。**
+
+### 当前配置
+
+```javascript
+// services/axios.js
+import Axios from "axios";
+import {toast} from "sonner";
+
+const axios = Axios.create({
+    baseURL: import.meta.env.VITE_BACKEND_URL,
+    timeout: 30000,
+});
+
+axios.interceptors.response.use(
+    (response) => response.data,
+    (error) => { /* ... toast.error(msg); ... */ },
+);
+
+export default axios;
+```
+
+### Vite proxy 配置
+
+Vite proxy 配置（vite.config.js）确保开发时 API 请求正确转发：
+
+```javascript
+// vite.config.js — proxy 配置
+proxy: {
+    '/topics': { target: 'http://127.0.0.1:8999', changeOrigin: true },
+    '/agents': { target: 'http://127.0.0.1:8999', changeOrigin: true },
+    '/tools': { target: 'http://127.0.0.1:8999', changeOrigin: true },
+    '/skills': { target: 'http://127.0.0.1:8999', changeOrigin: true },
+    '/sandbox': { target: 'http://127.0.0.1:8999', changeOrigin: true },
+}
+```
+
+---
+
+## 9. 目录结构规范
+
+### 前端项目结构
+
+```
+frontend/src/
+├── app.jsx                  # App 根组件
+├── main.jsx                 # 入口（createRoot + Provider）
+├── router.jsx               # 路由配置
+├── providers.jsx            # AppProviders（主题等）
+├── index.css                # 全局样式 + Tailwind
+├── components/              # 共享组件
+│   ├── ui/                  # shadcn/ui 基础组件（button、dialog、toast...）
+│   ├── avatar.jsx           # Agent 头像组件
+│   ├── header.jsx           # 全局 Header
+│   └── window-controls.jsx  # 桌面窗口控制
+├── views/                   # 页面视图（按功能域组织）
+│   ├── agents/              # Agent 管理域
+│   │   ├── agents-view.jsx  # Agent 列表页
+│   │   ├── create-agent.jsx # 创建 Agent
+│   │   └── agent-editor.jsx # Agent 编辑器
+│   └── ...                  # 其他功能域
+├── stores/                  # MobX Store（每域一个）
+│   ├── index.js             # Store 注册 + MobxContext
+│   ├── agent-store.js       # Agent 数据管理
+│   ├── topic-store.js       # Topic 数据管理
+│   ├── tool-store.js        # Tool 数据管理
+│   ├── skill-store.js       # Skill 数据管理
+│   └── sandbox-store.js     # Sandbox 数据管理
+├── services/                # HTTP Service（每域一个）
+│   ├── axios.js             # 全局 axios 实例 + 拦截器
+│   ├── agent-service.js     # Agent API
+│   ├── topic-service.js     # Topic API
+│   ├── tool-service.js      # Tool API
+│   ├── skill-service.js     # Skill API
+│   ├── sandbox-service.js   # Sandbox API
+│   └── runtime-service.js   # Runtime/SSE API
+├── hooks/                   # 自定义 Hooks
+│   ├── use-store.jsx        # Store 访问 Hook
+│   └── use-theme.js         # 主题切换 Hook
+├── runtime/                 # SSE 运行时（独立子系统）
+│   ├── stream-client.js     # SSE 传输层
+│   ├── event-reducer.js     # 事件归约
+│   ├── message-store.js     # 消息存储
+│   └── agent-runtime.js     # Agent 运行时管理
+├── lib/                     # 工具库
+│   └── utils.js             # cn() Tailwind 合并工具
+└── utils/                   # 业务工具函数
+    └── time.js              # 时间格式化
+```
+
+### 目录职责
+
+| 目录 | 职责 | 依赖方向 |
+|------|------|---------|
+| `components/ui/` | shadcn/ui 基础组件，不依赖业务 | 被所有组件依赖 |
+| `components/` | 共享业务组件 | 依赖 ui/、stores/、hooks/ |
+| `views/` | 页面级视图 | 依赖 components/、stores/、hooks/ |
+| `stores/` | 数据状态管理 | 依赖 services/ |
+| `services/` | HTTP 调用封装 | 依赖 axios.js |
+| `hooks/` | 自定义 React Hook | 依赖 stores/、lib/ |
+| `runtime/` | SSE 实时通信 | 依赖 services/ |
+| `lib/` | 通用工具 | 无外部依赖 |
+| `utils/` | 业务工具函数 | 无外部依赖 |
+
+---
+
+## 10. 命名规范
+
+**组件 PascalCase 命名，文件 kebab-case 命名。使用 `@/` 路径别名。**
+
+### 组件命名
+
+| 类型 | 组件名 | 文件名 |
+|------|--------|--------|
+| 页面组件 | `AgentsView` | `agents-view.jsx` |
+| 展示组件 | `AgentCard` | `agent-card.jsx`（独立文件时） |
+| UI 基础组件 | `FancyButton` | `fancy-button.jsx` |
+| 自定义 Hook | `useStore` | `use-store.jsx` |
+| Store 类 | `TopicStore` | `topic-store.js` |
+| Service 类 | `ToolService` | `tool-service.js` |
+
+### 事件处理命名
+
+内部处理函数 `handleXxx`，对应 prop `onXxx`：
+
+```javascript
+// ✅ 正确
+const AgentCard = ({agent, onClick}) => {
+    const handleClick = () => {
+        onClick(agent.name);  // prop
+    };
+    return <button onClick={handleClick}>{agent.name}</button>;
+};
+
+// ❌ 错误
+const AgentCard = ({agent, onClick}) => {
+    return <button onClick={() => onClick(agent.name)}>{agent.name}</button>;
+    // 内联函数每次渲染都创建新引用，可能导致子组件不必要的重渲染
+};
+
+// ❌ 混淆命名
+const AgentCard = ({agent, onSelect}) => {
+    const handleClick = () => onSelect(agent.name);
+    return <button onClick={handleClick}>{agent.name}</button>;
+};  // onSelect vs onClick 不一致
+```
+
+### 布尔 Prop 命名
+
+```javascript
+// ✅ 加前缀 is/has/can
+<FancyButton isLoading={true} hasError={false} canSubmit={true} />
+
+// ❌ 不加前缀
+<FancyButton loading={true} error={false} submit={true} />
+```
+
+### 变量命名
+
+```javascript
+// ✅ 描述性命名
+const activeTopics = topics.filter(t => t.id !== MAIN_TOPIC_ID);
+const sortedTopics = [...topics].sort(compareByDate);
+
+// ❌ 无意义缩写
+const at = topics.filter(t => t.id !== MAIN_TOPIC_ID);
+const st = [...topics].sort(compareByDate);
+```
+
+---
+
+## 11. 样式规范（Tailwind + shadcn/ui）
+
+**优先使用 shadcn/ui 组件，配合 Tailwind 原子类定制项目风格。禁止内联 style。**
+
+### 组件使用优先级
+
+1. **shadcn/ui 组件**（`components/ui/`）— 优先使用现有组件
+2. **Tailwind 原子类** — 用原子类组合自定义样式
+3. **@apply** — 仅在无法用原子类直接解决时使用，每个 @apply 最多包含 5 个属性
+4. **内联 style** — 禁止
+
+### 当前 shadcn/ui 组件清单
+
+| 组件 | 文件 | 用途 |
+|------|------|------|
+| `AlertDialog` | `alert-dialog.jsx` | 确认弹窗 |
+| `Button` | `button.jsx` | 通用按钮 |
+| `Collapsible` | `collapsible.jsx` | 折叠面板 |
+| `DropdownMenu` | `dropdown-menu.jsx` | 下拉菜单 |
+| `FancyButton` | `fancy-button.jsx` | 高亮按钮 |
+| `LoadingState` | `loading-state.jsx` | 加载状态 |
+| `Popover` | `popover.jsx` | 浮层弹出 |
+| `ScrollArea` | `scroll-area.jsx` | 滚动区域 |
+| `Select` | `select.jsx` | 下拉选择 |
+| `Sonner/Toaster` | `sonner.jsx` | Toast 提示 |
+| `Tabs` | `tabs.jsx` | 标签页切换 |
+| `Tooltip` | `tooltip.jsx` | 提示浮层 |
+
+### Tailwind 类名约定
+
+| 场景 | 约定 | 示例 |
+|------|------|------|
+| 自定义 class | 语义化命名，不以 `tw-` 开头 | `rounded-card`、`h-display`、`font-display` |
+| 布局 | 先布局后视觉 | `flex gap-3 p-6 rounded-card` → flex → gap → padding → visual |
+| 响应式 | 移动优先 | `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3` |
+| 深色模式 | 使用 CSS 变量 | `bg-background text-foreground`（而非 `bg-white text-black`） |
+| 条件样式 | `cn()` 合并 | `cn("rounded-card", isActive && "border-primary")` |
+
+### cn() 工具
+
+使用 `lib/utils.js` 的 `cn()` 合并 Tailwind 类名：
+
+```javascript
+import {cn} from "@/lib/utils.js";
+
+<div className={cn("rounded-card p-6", isActive && "border-primary")} />
+```
+
+### JSX 属性顺序
+
+```jsx
+// ✅ 属性排序：ref → key → events → className → others
+<div
+    ref={containerRef}
+    key={item.id}
+    onClick={handleClick}
+    className={cn("rounded-card", isActive && "bg-primary")}
+    data-id={item.id}
+/>
+```
+
+---
+
+## 17. 视觉风格规范
+
+**OpenManus 遵循"editorial dark, bold minimal"设计语言。内容主导，界面隐退。**
+
+### 设计哲学
+
+| 原则 | 说明 | 示例 |
+|------|------|------|
+| **克制用色** | 单一高饱和度强调色，避免彩虹调色板 | 深色模式：lime accent (#b5ff6d)；亮色模式：deep green (#30af5b) |
+| **边界优先** | Hairline 边框代替阴影，分层代替漂浮 | `.rounded-card` 用 1px 边框，无 box-shadow |
+| **内容主导** | 界面元素淡化，让内容成为视觉焦点 | muted-foreground 用于标签、辅助信息 |
+| **字体对比** | Display 字体（ClashDisplay）+ Body 字体（Satoshi）形成层级 | 标题用 `.h-display`，正文用默认 sans-serif |
+| **动效克制** | 有限的 staggered entrance，无装饰性动画 | `.anim-rise` + `.anim-delay-{1..4}`，80ms 间隔 |
+
+---
+
+### 字体系统
+
+**三种字体角色，各自负责不同层级：**
+
+| 字体 | 用途 | CSS class | 来源 |
+|------|------|-----------|------|
+| **Satoshi** | 正文、UI 控件、标签 | `font-sans`（默认） | Fontshare（self-hosted） |
+| **ClashDisplay** | 标题、强调文字 | `.font-display` / `.h-display` / `.h-section` | Fontshare（self-hosted） |
+| **JetBrains Mono Variable** | 代码、Agent 输出、状态 | `.font-mono` / `code` / `pre` | @fontsource-variable |
+
+**字体加载策略：**
+- Satoshi 和 ClashDisplay 自托管（`/fonts/` 目录），Electron 离线可用
+- 字重：Satoshi 400/500/700，ClashDisplay 500/600
+- `font-display: swap` 避免 FOIT
+
+**标题层级：**
+
+| Class | 字号 | 行高 | 字间距 | 用途 |
+|-------|------|------|--------|------|
+| `.h-display` | 30px | 1.1 | -0.015em | 页面标题（Agents、Tools...） |
+| `.h-section` | 16px | 1.2 | -0.01em | 区块小标题 |
+| 默认 `h1`/`h2`/`h3` | ClashDisplay 500 | - | -0.01em | HTML 标题元素自动应用 |
+
+---
+
+### 色彩系统
+
+#### 深色模式（default signature）
+
+**"tinted near-black + lime accent"：**
+
+| 语义变量 | HSL | 十六进制 | 用途 |
+|----------|-----|---------|------|
+| `--background` | 240 6% 4% | #0a0a0c | 页面背景（最深） |
+| `--card` | 240 5% 7% | #111114 | 卡片背景（中层） |
+| `--sidebar` | 240 5% 10% | #18181c | 侧边栏背景（上层） |
+| `--foreground` | 230 100% 98% | #f6f7ff | 主文本（冷白） |
+| `--muted-foreground` | 240 8% 85% | #d6d6de | 辅助文本、标签 |
+| `--accent` | 88 100% 72% | #b5ff6d | **强调色（lime）** |
+| `--border` | 240 7% 14% | #232328 | Hairline 边框 |
+
+**分层逻辑：** `background < card < sidebar < popover`，通过明度递增形成层级。
+
+#### 亮色模式（inverted signature）
+
+**"cool off-white + deep green accent"：**
+
+| 语义变量 | HSL | 十六进制 | 用途 |
+|----------|-----|---------|------|
+| `--background` | 240 20% 99% | #f7f8fa | 页面背景（微冷白） |
+| `--card` | 0 0% 100% | #ffffff | 卡片背景 |
+| `--sidebar` | 240 20% 96% | #ececee | 侧边栏背景 |
+| `--foreground` | 240 6% 10% | #18181b | 主文本（近黑） |
+| `--muted-foreground` | 240 5% 45% | #71717a | 辅助文本 |
+| `--accent` | 142 57% 44% | #30af5b | **强调色（深绿）** |
+| `--border` | 240 5% 90% | #e4e4e7 | Hairline 边框 |
+
+**亮色注意：** lime (#b5ff6d) 在白色背景上对比度不足，必须用深绿 (#30af5b)。
+
+#### 语义色（用于状态提示）
+
+| 状态 | 深色 HSL | 亮色 HSL | 用途 |
+|------|---------|---------|------|
+| `success` | 152 50% 55% | 142 57% 38% | 成功提示、TeamLeader 角色 |
+| `warning` | 38 80% 60% | 38 80% 40% | 警告提示、Coder 角色 |
+| `info` | 199 70% 65% | 199 70% 42% | 信息提示、Researcher 角色 |
+| `destructive` | 0 60% 55% | 0 70% 48% | 错误提示、删除操作 |
+
+#### Agent 角色色（用于 Avatar 和群聊视图）
+
+| 角色 | 深色 HSL | 用途 |
+|------|---------|------|
+| `teamleader` | 152 50% 55% | 协调者（绿） |
+| `researcher` | 199 70% 65% | 研究者（天蓝） |
+| `coder` | 38 80% 60% | 编码者（琥珀） |
+| `user` | 240 5% 70% | 用户（灰） |
+| `system` | 0 60% 55% | 系统（红） |
+
+**使用方式：** `.dot-teamleader`、`.text-role-coder` 等 utility classes。
+
+---
+
+### 布局原语（Component Primitives）
+
+**预定义 CSS class，避免重复手写 Tailwind 组合：**
+
+| Class | 说明 | 常见用途 |
+|-------|------|---------|
+| `.surface-card` | 淡色表面 + hairline 边框，无阴影 | 卡片容器 |
+| `.surface-raised` | 更强的 raised surface | hover/active 状态 |
+| `.rounded-card` | 24px 圆角 + 透明背景 + hairline 边框 | Agent/Tool/Skill 卡片网格 |
+| `.hairline-card` | 透明背景 + 底部 hairline（无侧/上边框） | 列表行（简历式布局） |
+| `.card-icon-badge` | 圆形图标容器 + faint surface + accent 图标 | 卡片左上图标 |
+| `.hairline` | 水平 hairline 分隔线 | 区块分隔 |
+
+**`.rounded-card` 行为：**
+- 深色：`background-color: hsl(var(--sidebar) / 0.18)`（浅色表面 lift）
+- 亮色：`background-color: hsl(var(--foreground) / 0.025)`（淡暗表面）
+- Hover：边框变亮，背景加深
+
+**`.hairline-card` 行为：**
+- 透明背景，无 box
+- 只有底部 1px 边框
+- Hover：边框变亮
+- 列表感，非网格感
+
+---
+
+### 间距和圆角
+
+| 变量/值 | 说明 | 常见用途 |
+|---------|------|---------|
+| `--radius` | 8px（base） | shadcn 组件默认圆角 |
+| `rounded-lg` | `var(--radius)` = 8px | 中等圆角 |
+| `rounded-3xl` / `.rounded-card` | 24px | 按钮、卡片（pillowy feel） |
+| `gap-3` | 12px | Flex/Grid 子元素间距 |
+| `gap-6` | 24px | 区块间距 |
+| `p-6` | 24px padding | 卡片内边距 |
+| `px-5 py-2` | 按钮 padding | FancyButton |
+
+---
+
+### 动效系统
+
+#### 入场动效（Staggered Entrance）
+
+```jsx
+// ✅ 限制性 staggered entrance
+<div className="anim-rise anim-delay-1">Card 1</div>
+<div className="anim-rise anim-delay-2">Card 2</div>
+<div className="anim-rise anim-delay-3">Card 3</div>
+```
+
+- `.anim-rise`: `translateY(8px) → 0` + `opacity: 0 → 1`
+- Easing: `cubic-bezier(0.16, 1, 0.3, 1)`（premium feel）
+- Delay: `anim-delay-{1..4}` = 80ms / 160ms / 240ms / 320ms
+- **禁止** 全局入场动画，仅用于列表/卡片
+
+#### Hover 微交互
+
+| 交互 | 实现 | 用途 |
+|------|------|------|
+| Lift | `.lift-on-hover` → `translateY(-1px)` | 卡片、列表项 |
+| Border brighten | `.rounded-card:hover` → 边框变亮 | 卡片 |
+| Background tint | `.rounded-card:hover` → 背景加深 | 卡片 |
+| Rippling fill | `FancyButton` → 色块从底部填充 | CTA 按钮 |
+
+#### 状态动效
+
+| 动效 | Class | 用途 |
+|------|-------|------|
+| Running pulse | `.animate-pulse-dot` | Session 运行中指示 |
+| Typing cursor | `.typing-cursor::after` | Agent 流式输出光标 |
+| Accent glow | `.accent-glow` | Active nav、CTA、running states |
+
+#### 时间曲线
+
+| 场景 | Easing | Duration |
+|------|--------|----------|
+| 入场/出场 | `cubic-bezier(0.16, 1, 0.3, 1)` | 400ms |
+| Hover | `ease`（default） | 200ms |
+| Button fill | `cubic-bezier(0.4, 0, 0, 1)` | 500ms（ripple） |
+| Text roll | `cubic-bezier(0.16, 1, 0.3, 1)` | 700ms |
+
+---
+
+### 视觉层级
+
+**从重到轻：**
+
+| 层级 | 实现 | 示例 |
+|------|------|------|
+| **主内容** | `text-foreground` | 标题、正文 |
+| **辅助内容** | `text-muted-foreground` | 描述、时间戳 |
+| **标签** | `text-[11px] uppercase tracking-widest text-foreground/45` | "BUILT-IN"/"CUSTOM" 区块标题 |
+| **元信息** | `text-[13px] text-muted-foreground` | Agent 描述 |
+| **禁用** | `text-muted-foreground/50` | lock 图标 |
+
+**标题 → 描述 → 标签 → 元信息，逐步淡化。**
+
+---
+
+### 交互模式
+
+#### 按钮占比
+
+| 按钮 | Class | 用途 |
+|------|-------|------|
+| **CTA / Primary** | `FancyButton`（variant="accent"） | 主操作（New Agent、Send） |
+| **Secondary** | `Button` variant="outline" | 次操作 |
+| **Text / Ghost** | `Button` variant="ghost" | 取消、辅助链接 |
+| **Destructive** | `Button` variant="destructive" | 删除、危险操作 |
+
+**FancyButton 行为：**
+- 默认：白色 hairline outline（neutral）
+- Hover：accent 色块从底部填充，文字变对比色
+- **克制用色：** accent 仅在 hover 出现
+
+#### Focus 状态
+
+```jsx
+// ✅ 键盘 focus ring
+<button className="focus-ring">...</button>
+```
+
+- 双 ring：outer accent，inner background
+- 满足 a11y visible focus 要求
+
+#### Scrollbar
+
+- 宽度：6px
+- Track: transparent
+- Thumb: `hsl(240 5% 20%)`（深色）
+- Hover: `hsl(88 100% 72% / 0.4)`（accent-tinted）
+
+---
+
+### 新增页面检查清单
+
+开发新页面/功能时，确保：
+
+- [ ] 使用 `.h-display` 作为页面标题（ClashDisplay 字体）
+- [ ] 使用 `.rounded-card` 作为卡片容器（24px 圆角 + hairline 边框）
+- [ ] 标签用 `text-[11px] uppercase tracking-widest text-foreground/45`
+- [ ] 描述用 `text-[13px] text-muted-foreground`
+- [ ] CTA 按钮用 `FancyButton`
+- [ ] 列表用 `.hairline-card`（简历式）或 `.rounded-card`（网格式）
+- [ ] 深色/亮色模式都验证（accent 颜色不同）
+- [ ] 无 box-shadow（用边框 + 背景 tint 代替）
+- [ ] 动效仅用于入场/状态，无装饰性动画
+
+---
+
+## 12. 错误处理与提示
+
+**错误信息通过 axios 拦截器 + sonner toast 统一提示，成功信息由 View 层自主决策。**
+
+### 完整流程
+
+```
+Service 调用 → axios 发请求 → 响应拦截器
+    ├── 成功 → 解包 response.data → 返回给 Store → View 更新
+    └── 失败 → toast.error(msg) → Store 捕获 error 状态 → View 展示 error 状态
+```
+
+### Store 层错误处理
+
+```javascript
+// ✅ 正确
+class TopicStore {
+    error = null;
+    
+    async delete(id) {
+        this.error = null;
+        try {
+            await topicService.deleteTopic(id);
+            runInAction(() => {
+                this.topics = this.topics.filter(t => t.id !== id);
+            });
+            // 成功提示由 View 层决定是否显示
+        } catch (e) {
+            runInAction(() => { this.error = e.message; });
+            // toast.error 已由 axios 拦截器处理
+        }
+    }
+}
+```
+
+### View 层成功提示
+
+```javascript
+// ✅ View 自主决定成功提示
+const TopicList = observer(() => {
+    const {topicStore} = useStore();
+    const handleDelete = async (id) => {
+        await topicStore.delete(id);
+        if (!topicStore.error) {
+            toast.success("Topic deleted");  // ✅ View 层自主 toast
+        }
+    };
+});
+```
+
+### 禁止事项
+
+```javascript
+// ❌ Store 中调用 toast
+class TopicStore {
+    async delete(id) {
+        try { /* ... */ } catch (e) {
+            toast.error(e.message);  // ❌ 不应由 Store 处理 UI 提示
+        }
+    }
+}
+
+// ❌ View 中手动处理网络错误
+const handleDelete = async (id) => {
+    try {
+        await topicService.deleteTopic(id);
+    } catch (e) {
+        toast.error(e.message);  // ❌ axios 拦截器已处理
+    }
+};
+
+// ❌ 吞没错误
+const handleDelete = async (id) => {
+    try { /* ... */ } catch (e) { }  // ❌ 无处理
+};
 ```
 
 ---
 
 ## 13. 安全规范
 
-### SQL 查询
+### XSS 防护
 
-**必须使用参数化查询，禁止 f-string / 字符串拼接 SQL。**
+**禁止使用 `dangerouslySetInnerHTML`，除非输入经过 DOMPurify 消毒。**
 
-```python
-# ✅ 参数化查询
-cur = await db.execute(
-    "SELECT * FROM topics WHERE id = ?", (topic_id,)
-)
+```javascript
+// ❌ 危险 - 未消毒的 HTML
+<div dangerouslySetInnerHTML={{__html: userInput}} />
 
-# ✅ 动态 WHERE 子句仍使用参数
-clauses = []
-params = []
-if kind:
-    clauses.append("kind = ?")
-    params.append(kind)
-where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
-cur = await db.execute(f"SELECT * FROM sessions {where}", params)
+// ✅ 安全 - 纯文本渲染
+<div>{userInput}</div>
 
-# ❌ SQL 注入风险
-cur = await db.execute(
-    f"SELECT * FROM topics WHERE id = '{topic_id}'"  # ❌
-)
+// ✅ 安全 - 消毒后渲染（如 Markdown）
+import DOMPurify from "dompurify";
+<div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(html)}} />
 ```
 
-### 命令注入
+### URL 安全
 
-**禁止将未校验的用户输入传入 shell 命令。使用 `subprocess` 时用列表参数。**
+**验证用户输入的 URL scheme，只允许 http/https/mailto。**
 
-```python
-# ✅ 列表参数
-proc = subprocess.run(["git", "status"], cwd=workdir, capture_output=True)
+```javascript
+// ✅ 安全
+function safeUrl(url) {
+    try {
+        const parsed = new URL(url);
+        if (["http:", "https:", "mailto:"].includes(parsed.protocol)) return url;
+    } catch {}
+    return undefined;
+}
 
-# ❌ 字符串拼接
-proc = subprocess.run(f"git status {user_input}", shell=True)  # ❌
+// ❌ 危险 - 可能注入 javascript: URL
+<a href={userUrl}>Visit</a>
 ```
 
-### 路径遍历
+### 敏感数据
 
-**校验用户提供的路径，拒绝 `..` 和绝对路径越界。**
-
-```python
-# ✅ 校验路径
-def safe_path(base: Path, user_path: str) -> Path:
-    target = (base / user_path).resolve()
-    if not str(target).startswith(str(base.resolve())):
-        raise ValidationError("path traversal detected")
-    return target
-```
-
-### 密钥管理
-
-**禁止硬编码密钥，使用环境变量或配置文件。**
-
-```python
-# ✅ 从环境变量 / 配置读取
-api_key = settings.api_key
-
-# ❌ 硬编码
-api_key = "sk-abc123"  # ❌
-```
+**禁止在 localStorage 存储密钥、token 等敏感信息。** 当前项目 localStorage 使用：
+- ✅ `openmanus.activeTopicId` — 主题 ID（低敏感）
+- ✅ `openmanus.theme` — 主题偏好（非敏感）
+- ❌ 不应存储 API key、access token、password
 
 ---
 
-## 14. 日志规范
+## 14. 组件设计模式
 
-**使用 loguru 包，统一通过 `openmanus.log` 模块获取 logger。禁止使用 `print()`。**
+### Container / Presentational 拆分
 
-### Logger 初始化
+| 类型 | 职责 | 数据来源 |
+|------|------|---------|
+| Container | 数据获取、路由、Store 交互 | Store / Service |
+| Presentational | 纯 UI 渲染 | Props only |
 
-```python
-# openmanus/log/logger.py
-import sys
-from pathlib import Path
+```javascript
+// ✅ Container — 拥有数据
+const AgentsView = observer(() => {
+    const {agentStore} = useStore();
+    useEffect(() => { agentStore.loadAgents() }, [agentStore]);
+    return <AgentList agents={agentStore.agents} onSelect={handleSelect}/>;
+});
 
-def setup_logger(log_path: str | None = None):
-    """Setup loguru logger with console and file handlers.
-
-    Args:
-        log_path: Log file path. Defaults to ~/.openmanus/logs/openmanus.log.
-
-    Returns:
-        Configured loguru logger instance.
-    """
-    from loguru import logger
-
-    if log_path is None:
-        log_path = str(Path.home() / ".openmanus" / "logs" / "openmanus.log")
-
-    Path(log_path).parent.mkdir(parents=True, exist_ok=True)
-
-    logger.remove()
-
-    # 控制台输出（彩色）
-    logger.add(
-        sys.stderr,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
-               "<level>{level: <8}</level> | "
-               "<cyan>{name}</cyan>:<cyan>{function}</cyan> - "
-               "<level>{message}</level>",
-        level="DEBUG",
-    )
-
-    # 文件输出（自动轮转）
-    logger.add(
-        log_path,
-        rotation="10 MB",
-        retention="7 days",
-        compression="zip",
-        level="DEBUG",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-    )
-
-    return logger
-
-
-logger = setup_logger()
+// ✅ Presentational — 纯渲染
+const AgentList = ({agents, onSelect}) => (
+    <div className="grid grid-cols-3 gap-3">
+        {agents.map(a => <AgentCard key={a.name} agent={a} onSelect={onSelect}/>)}
+    </div>
+);
 ```
 
-```python
-# openmanus/log/__init__.py
-from openmanus.log.logger import logger, setup_logger
+### 条件渲染
 
-__all__ = ["logger", "setup_logger"]
+```javascript
+// ✅ Early return 模式
+const AgentDetail = ({agent}) => {
+    if (!agent) return <EmptyState/>;
+    return <div>...</div>;
+};
+
+// ❌ 嵌套三元
+const AgentDetail = ({agent}) => (
+    agent ? <div>...</div> : <EmptyState/>  // ❌ 复杂场景难以阅读
+);
+
+// ✅ 条件子组件
+{agent.is_builtin && <Lock className="size-4"/>}
+{!agent.is_builtin && <EditButton/>}
 ```
 
-### 使用方式
+### 列表渲染
 
-```python
-from openmanus.log import logger
+```javascript
+// ✅ 始终使用唯一 key
+{agents.map(a => <AgentCard key={a.name} agent={a}/>)}
 
-logger.info("Agent %s started in topic %s", agent_name, topic_id)
-logger.warning("Mailbox push failed for %s/%s", topic_id, agent_name)
-logger.error("Failed to delete thread: %s", e)
-logger.debug("SQL: %s, params: %s", sql, params)
+// ❌ 使用 index 作为 key
+{agents.map((a, i) => <AgentCard key={i} agent={a}/>)}  // ❌
+
+// ❌ 无 key
+{agents.map(a => <AgentCard agent={a}/>)}  // ❌
 ```
 
-### 日志级别约定
+### 组件通信方式
 
-| 级别 | 用途 | 示例 |
+| 场景 | 方式 | 说明 |
 |------|------|------|
-| `DEBUG` | 详细调试信息，仅开发时关注 | SQL 语句、函数入参、中间变量 |
-| `INFO` | 正常业务流程 | Agent 启动、Topic 创建、请求处理 |
-| `WARNING` | 可恢复的异常或非预期情况 | 重试成功、可选功能降级、配置缺失使用默认值 |
-| `ERROR` | 需要关注的错误 | 外部服务调用失败、DB 写入失败 |
-| `CRITICAL` | 系统级故障 | 无法启动、存储空间耗尽 |
-
-### 错误示例
-
-```python
-# ❌ 使用 print
-print(f"Agent {name} started")  # ❌
-
-# ❌ 使用 logging 模块（项目统一用 loguru）
-import logging
-logger = logging.getLogger(__name__)  # ❌
-
-# ❌ 在日志中暴露敏感信息
-logger.debug("API key: %s", api_key)  # ❌
-```
+| 父→子 | Props | 最常见 |
+| 子→父 | Callback props | `onSelect`, `onChange` |
+| 跨组件 | Store | MobX observable store |
+| 全局 | Context | 仅低频数据（theme/locale） |
 
 ---
 
-## 15. 测试规范
+## 15. 代码复杂度
 
-**使用 pytest，测试文件放在 `backend/tests/`，共享 fixture 放在 `conftest.py`。**
-
-### 测试配置
-
-`pyproject.toml` 中已配置：
-
-```toml
-[tool.pytest.ini_options]
-asyncio_mode = "auto"
-testpaths = ["tests"]
-```
-
-**`asyncio_mode = "auto"` — async `test_*` 函数自动识别，无需添加 `@pytest.mark.asyncio` 标记。**
-
-### 文件组织
-
-```
-backend/tests/
-├── conftest.py                 # 共享 fixture（tmp_openmanus_home 等）
-├── test_build_agent_tools.py   # Agent 构建工具测试
-├── test_tool_guard.py          # ToolGuard 中间件测试
-├── test_tool_loader.py         # 工具加载测试
-├── test_tool_whitelist.py      # 工具白名单测试
-├── test_topics_sessions.py     # Topic/Session CRUD 测试
-└── test_whiteboard_mailbox.py  # 白板/邮箱测试
-```
-
-### Fixture 隔离
-
-**测试涉及文件系统时，必须使用 `tmp_openmanus_home` fixture 隔离 `~/.openmanus`，禁止写入真实用户配置。**
-
-```python
-# tests/conftest.py
-@pytest.fixture
-def tmp_openmanus_home(tmp_path, monkeypatch):
-    """Provide isolated ~/.openmanus directory for tests."""
-    home = tmp_path / "openmanus_home"
-    home.mkdir()
-    monkeypatch.setenv("OPENMANUS_HOME", str(home))
-    return home
-```
-
-### 测试命名
-
-`test_<场景>_<预期>`：
-
-```python
-# ✅ 清晰的测试命名
-def test_list_tools_returns_deepagents_builtin_and_user():
-    ...
-
-def test_delete_main_topic_raises_error():
-    ...
-
-def test_get_nonexistent_topic_returns_none():
-    ...
-
-# ❌ 模糊的命名
-def test_tools():
-    ...
-
-def test_error():
-    ...
-```
-
-### 异步测试
-
-```python
-# ✅ 自动识别 async 测试（asyncio_mode = "auto"）
-async def test_create_topic():
-    topic = await TopicStore.create(title="Test")
-    assert topic.id is not None
-
-# ❌ 不要手动添加 @pytest.mark.asyncio
-@pytest.mark.asyncio   # ❌ 多余
-async def test_create_topic():
-    ...
-```
-
-### 覆盖率目标
-
-**80%+ 代码覆盖率，关键路径 100%。**
-
-```bash
-cd backend && uv run pytest tests/ --cov=openmanus --cov-report=term-missing
-```
-
----
-
-## 16. 代码复杂度
-
-**控制函数规模和嵌套深度，保持可读性。**
+**控制组件规模和嵌套深度，保持可读性。**
 
 | 指标 | 阈值 | 超出时的处理 |
 |------|------|-------------|
-| 函数体行数 | ≤ 50 行 | 拆分为子函数 |
-| 函数参数数量 | ≤ 5 个 | 使用 Pydantic model 封装参数 |
-| 嵌套层级 | ≤ 4 层 | 提前 return / 提取子函数 |
-| 文件行数 | ≤ 400 行 | 拆分为多个模块 |
+| 组件函数体 | ≤ 80 行 | 拆分子组件 |
+| 嵌套层级 | ≤ 4 层 | 提前 return / 提取子组件 |
+| Props 数量 | ≤ 6 个 | 合并为对象 prop |
+| 单文件行数 | ≤ 400 行 | 拆分为多个文件 |
+| useEffect 行数 | ≤ 20 行 | 提取为自定义 Hook |
 
-### 正确示例
+### 拆分示例
 
-```python
-# ✅ 参数过多时用 model 封装
-class CreateTopicRequest(BaseModel):
-    title: str = Field(description="标题")
-    workdir: Optional[str] = Field(default=None, description="工作目录")
-    agent_name: Optional[str] = Field(default=None, description="Agent名称")
+```javascript
+// ✅ 大组件拆分
+// agents-view.jsx
+const AgentsView = observer(() => {
+    return (
+        <div className="h-full overflow-y-auto">
+            <Header/>
+            <AgentGrid agents={agentStore.builtinAgents} title="Built-in"/>
+            <AgentGrid agents={agentStore.userAgents} title="Custom"/>
+        </div>
+    );
+});
 
-async def create_topic(req: CreateTopicRequest) -> Topic:
-    ...
+// ✅ 提取展示子组件
+const AgentGrid = ({agents, title}) => (
+    <>
+        <SectionTitle>{title}</SectionTitle>
+        <div className="grid grid-cols-3 gap-3">
+            {agents.map(a => <AgentCard key={a.name} agent={a}/>)}
+        </div>
+    </>
+);
 ```
 
-### 错误示例
+### Early Return 模式
 
-```python
-# ❌ 参数过多
-async def create_topic(
-    title: str, workdir: str, agent: str,
-    model: str, kind: str, metadata: dict,
-) -> Topic:
-    ...
+```javascript
+// ✅ Early return 减少嵌套
+const ChatView = ({session}) => {
+    if (!session) return <EmptyState/>;
+    if (session.status === "loading") return <LoadingState/>;
+    return <ChatPane session={session}/>;
+};
 
-# ❌ 嵌套过深
-async def process(data):
-    if data:
-        if data.items:
-            for item in data.items:
-                if item.active:
-                    if item.type == "task":
-                        ...  # 5 层嵌套 ❌
+// ❌ 嵌套过深
+const ChatView = ({session}) => {
+    if (session) {
+        if (session.status === "loading") {
+            return <LoadingState/>;
+        } else {
+            return <ChatPane session={session}/>;
+        }
+    } else {
+        return <EmptyState/>;
+    }
+};
 ```
 
----
+### 布尔命名
 
-## 17. 反模式清单
+```javascript
+// ✅ 肯定命名
+const isVisible = true;
+const isEnabled = false;
+const hasError = true;
 
-**以下模式在 OpenManus 代码库中禁止使用。**
-
-### 可变默认参数
-
-```python
-# ❌ 可变默认参数 — 共享状态 bug
-def append_to(item: str, items: list[str] = []):
-    items.append(item)
-    return items
-
-# ✅ 使用 None + 内部创建
-def append_to(item: str, items: list[str] | None = None) -> list[str]:
-    if items is None:
-        items = []
-    items.append(item)
-    return items
-```
-
-### None 比较
-
-```python
-# ❌ ==
-if value == None:
-    ...
-
-# ✅ is
-if value is None:
-    ...
-
-# ✅ is not
-if value is not None:
-    ...
-```
-
-### Wildcard 导入
-
-```python
-# ❌ 命名空间污染
-from os.path import *
-from openmanus.common.response import *
-
-# ✅ 显式导入
-from os.path import join, exists
-from openmanus.common.response import ApiResponse, ApiListResponse
-```
-
-### 字符串拼接循环
-
-```python
-# ❌ O(n²)
-result = ""
-for item in items:
-    result += str(item)
-
-# ✅ O(n)
-result = "".join(str(item) for item in items)
-```
-
-### print() 替代 logging
-
-```python
-# ❌ print
-print(f"Processing {name}")
-
-# ✅ loguru
-from openmanus.log import logger
-logger.info("Processing %s", name)
-```
-
-### type() 比较
-
-```python
-# ❌
-if type(obj) == list:
-    ...
-
-# ✅
-if isinstance(obj, list):
-    ...
-```
-
-### 遮蔽内建名称
-
-```python
-# ❌ 遮蔽 list / dict / str / id
-def process(list: list[str], id: str) -> dict: ...
-
-# ✅ 使用描述性名称
-def process(items: list[str], item_id: str) -> dict: ...
+// ❌ 否定命名
+const isNotHidden = true;   // ❌
+const isNotDisabled = true; // ❌
 ```
 
 ---
 
-## 附录 A：模块索引
+## 16. 反模式清单
 
-| 模块 | 路径 | 职责 |
+**以下模式在 OpenManus 前端代码中禁止使用。**
+
+### 内联对象/函数创建
+
+```javascript
+// ❌ 每次渲染创建新对象/函数引用，导致子组件不必要重渲染
+<Child style={{margin: 10}} onClick={() => doSomething()}/>
+
+// ✅ 使用 useMemo/useCallback 或提前定义
+const style = useMemo(() => ({margin: 10}), []);
+const handleClick = useCallback(() => doSomething(), []);
+<Child style={style} onClick={handleClick}/>
+```
+
+### Props 透传
+
+```javascript
+// ❌ 无差别透传所有 props
+const Wrapper = (props) => <Child {...props}/>;  // ❌
+
+// ✅ 显式声明需要的 props
+const Wrapper = ({agent, onSelect}) => <AgentCard agent={agent} onSelect={onSelect}/>;
+```
+
+### 可变状态直接修改
+
+```javascript
+// ❌ MobX 外直接修改 observable
+this.topics.push(newTopic);  // ✅ 在 runInAction 内可以
+
+// ❌ React state 直接修改
+state.items.push(newItem);  // ❌
+setState(prev => [...prev, newItem]);  // ✅
+```
+
+### 数组 index 作为 key
+
+```javascript
+// ❌
+{items.map((item, i) => <Card key={i} item={item}/>)}
+
+// ✅ 使用唯一 ID
+{items.map(item => <Card key={item.id} item={item}/>)}
+```
+
+### 条件渲染中的 Hook
+
+```javascript
+// ❌ Hook 在条件分支内调用
+if (condition) {
+    const [value, setValue] = useState(0);  // ❌ 违反 Hook 规则
+}
+
+// ✅ Hook 在顶层调用，条件在内部
+const [value, setValue] = useState(0);
+if (!condition) return null;
+```
+
+### useEffect 误用
+
+```javascript
+// ❌ 用 useEffect 同步派生状态
+useEffect(() => {
+    setFullName(`${firstName} ${lastName}`);  // ❌ 直接在 render 中计算
+}, [firstName, lastName]);
+const fullName = `${firstName} ${lastName}`;  // ✅
+
+// ❌ 缺失依赖
+useEffect(() => {
+    fetchData(id);  // ❌ 缺少 id 依赖
+}, []);
+
+useEffect(() => {
+    fetchData(id);  // ✅
+}, [id]);
+```
+
+### 魔法字符串
+
+```javascript
+// ❌ 硬编码字符串
+if (topic.id === "main") { /* ... */ }  // ❌
+
+// ✅ 使用常量
+import {MAIN_TOPIC_ID} from "@/stores/topic-store.js";
+if (topic.id === MAIN_TOPIC_ID) { /* ... */ }  // ✅
+```
+
+### 组件内直接调用 print/console
+
+```javascript
+// ❌ 生产代码中的 console.log
+console.log("debug:", data);  // ❌
+
+// ✅ 移除或使用条件日志（开发环境）
+if (import.meta.env.DEV) {
+    console.log("debug:", data);  // ✅ 仅开发环境
+}
+```
+
+---
+
+## 附录 A：目录索引
+
+| 目录 | 路径 | 职责 |
 |------|------|------|
-| `agents` | `openmanus/agents/` | Agent 定义、加载、工厂、头像 |
-| `llm` | `openmanus/llm/` | LLM 接入层（ChatGLM） |
-| `skills` | `openmanus/skills/` | Skill 加载、嵌入 Python 执行 |
-| `tools` | `openmanus/tools/` | 工具加载、调度、邮箱/白板工具 |
-| `sandbox` | `openmanus/sandbox/` | 文件读写沙箱、目录监听 |
-| `runtime` | `openmanus/runtime/` | SSE 引擎、事件协议、Channel、健康检查 |
-| `topics` | `openmanus/topics/` | Topic/Session CRUD、邮箱/白板存储、TopicFlow |
-| `db` | `openmanus/db/` | DB 路径、Schema DDL、初始化 |
-| `common` | `openmanus/common/` | 响应包装、异常定义 |
-| `middleware` | `openmanus/middleware/` | AgentTrace、Retry、ToolGuard 中间件 |
-| `memory` | `openmanus/memory/` | LangGraph Checkpointer |
-| `log` | `openmanus/log/` | loguru 日志初始化 |
+| UI 基础组件 | `src/components/ui/` | shadcn/ui 基础组件（button、dialog、toast） |
+| 业务组件 | `src/components/` | 共享业务组件（avatar、header） |
+| 页面视图 | `src/views/` | 按功能域组织的页面级组件 |
+| 状态管理 | `src/stores/` | MobX observable store（每域一个） |
+| HTTP 服务 | `src/services/` | API 调用封装（每域一个） + axios.js |
+| 自定义 Hook | `src/hooks/` | React Hook（use-store、use-theme） |
+| SSE 运行时 | `src/runtime/` | SSE 传输 + 事件归约 + 消息存储 |
+| 工具库 | `src/lib/` | 通用工具（cn() 等） |
+| 业务工具 | `src/utils/` | 业务工具函数（时间格式化等） |
 
 ---
 
@@ -1083,65 +1285,52 @@ def process(items: list[str], item_id: str) -> dict: ...
 
 每次代码提交前，确认：
 
-### 模块结构
-- [ ] 新文件放在正确的领域模块下
-- [ ] `__init__.py` 已导出关键类/函数
-- [ ] 无 `api/` 中间层残留
-
-### Router
-- [ ] 无 `raise HTTPException`
-- [ ] 使用 `ApiResponse.ok()` / `ApiResponse.fail()` / `ApiListResponse.ok()` / `ApiListResponse.fail()`
-- [ ] 每个路由声明了 `response_model`
+### 数据流
+- [ ] View 不直接调用 Service
+- [ ] Store 不调用 toast（UI 提示由 axios 拦截器/View 处理）
 
 ### 导入
-- [ ] 全部 `from openmanus.xxx` 绝对导入
-- [ ] 导入顺序：stdlib → third-party → local
-- [ ] 无 wildcard import
+- [ ] 导入按分组排序（React → 第三方 → 项目内部）
+- [ ] 使用 `@/` 路径别名，无相对路径
+- [ ] 无 wildcard 导入
 
 ### 命名
-- [ ] 公开函数动词开头
-- [ ] 无以 `_` 开头但被外部引用的函数
+- [ ] 组件 PascalCase，文件 kebab-case
+- [ ] 事件处理 `handleXxx`，prop `onXxx`
+- [ ] 布尔 prop 加 `is`/`has`/`can` 前缀
 
-### 类型与返回
-- [ ] loader/service/store 返回 Pydantic 对象，不返回裸 `dict`
-- [ ] 所有函数/方法（除 router 外）有参数类型和返回类型
-- [ ] 使用 Python 3.12+ 类型语法（`list[]`、`X | None`）
-
-### 对象定义
-- [ ] 使用 `BaseModel`，未使用 `dataclass`
-- [ ] 字段使用 `Field()` 定义，包含 `description`（中文）
+### 样式
+- [ ] 优先使用 shadcn/ui 组件
+- [ ] 样式使用 Tailwind 原子类，禁止内联 style
+- [ ] 条件样式使用 `cn()` 合并
+- [ ] 属性排序 ref → key → events → className → others
 
 ### 错误处理
-- [ ] 无 bare `except`
-- [ ] 异常链使用 `from e`
-- [ ] 抛出 `OpenManusError` 子类，不抛裸 `Exception`
-
-### 异步
-- [ ] I/O 操作使用 `async def`
-- [ ] async 函数中无阻塞调用（`requests`、`time.sleep`）
+- [ ] axios 拦截器统一 `toast.error()`（自动）
+- [ ] 成功提示 View 层自主 `toast.success()`
+- [ ] Store 不调用 toast
+- [ ] 无吞没错误（空 catch）
 
 ### 安全
-- [ ] SQL 参数化查询，无 f-string 拼接
-- [ ] 无硬编码密钥
+- [ ] 无 `dangerouslySetInnerHTML` 或已用 DOMPurify 消毒
+- [ ] localStorage 不存敏感信息
+- [ ] 外部 URL 验证 scheme
 
-### 日志
-- [ ] 使用 `from openmanus.log import logger`
-- [ ] 无 `print()` 语句
-- [ ] 日志级别正确（DEBUG/INFO/WARNING/ERROR）
-
-### 测试
-- [ ] 涉及文件系统的测试使用 `tmp_openmanus_home` fixture
-- [ ] 测试命名 `test_<场景>_<预期>`
-- [ ] async 测试无 `@pytest.mark.asyncio` 标记
+### 组件设计
+- [ ] 容器/展示组件拆分合理
+- [ ] 列表渲染使用唯一 key
+- [ ] 条件渲染偏好 early return
 
 ### 代码复杂度
-- [ ] 函数体 ≤ 50 行
-- [ ] 函数参数 ≤ 5 个
-- [ ] 嵌套 ≤ 4 层
+- [ ] 组件 ≤ 80 行，嵌套 ≤ 4 层
+- [ ] Props ≤ 6 个
 - [ ] 文件 ≤ 400 行
 
 ### 反模式
-- [ ] 无可变默认参数
-- [ ] 使用 `is None` 而非 `== None`
-- [ ] 无字符串拼接循环
-- [ ] 无内建名称遮蔽
+- [ ] 无内联对象/函数创建导致重渲染
+- [ ] 无 Props 透传 `{...props}`
+- [ ] 无数组 index 作为 key
+- [ ] 无 Hook 在条件分支内调用
+- [ ] 无 useEffect 同步派生状态
+- [ ] 无魔法字符串/数字
+- [ ] 无生产代码 console.log

@@ -1,4 +1,4 @@
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {observer} from "mobx-react-lite";
 import {ChevronLeft, Sparkles} from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
@@ -12,12 +12,14 @@ import {CodeEditor, langFromName} from "@/components/ui/code-editor.jsx";
 const SkillDetail = observer(({name, onBack}) => {
     const {skillStore: s} = useStore();
     const {isDark} = useTheme();
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        s.loadSkillDetail(name).then();
+        setLoading(true);
+        s.loadSkillDetail(name).finally(() => setLoading(false));
     }, [name, s]);
 
-    if (s.detailLoading) return <LoadingState>Loading…</LoadingState>;
+    if (loading && !s.detailTree) return <LoadingState>Loading…</LoadingState>;
 
     return (
         <div className="flex h-full">

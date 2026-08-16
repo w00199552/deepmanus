@@ -1,6 +1,7 @@
 import {observer} from "mobx-react-lite";
 import {useEffect, useState} from "react";
 import {Check} from "lucide-react";
+import {toast} from "sonner";
 
 import {useStore} from "@/hooks/use-store.jsx";
 import {
@@ -40,8 +41,11 @@ export const AvatarPickerDialog = observer(function AvatarPickerDialog({
         if (pending) return;
         setPending(presetId);
         try {
-            await s.setAvatar(presetId);
-            onOpenChange(false);
+            const ok = await s.setAvatar(presetId);
+            if (ok) {
+                toast.success("头像已更新");
+                onOpenChange(false);
+            }
         } finally {
             setPending(null);
         }

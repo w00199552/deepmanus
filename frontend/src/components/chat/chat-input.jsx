@@ -1,11 +1,10 @@
 import {useEffect, useRef, useState} from "react";
+import {observer} from "mobx-react-lite";
 import {AtSign, Check, Cpu, Paperclip, Plus, Send, Sparkles, Square,} from "lucide-react";
 
+import {useStore} from "@/hooks/use-store.jsx";
 import {cn} from "@/lib/utils";
 import {Tooltip, TooltipContent, TooltipTrigger,} from "@/components/ui/tooltip";
-import {listSkills} from "@/services/agent-service";
-
-const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
 
 /**
  * ChatInput — ZCode-style input bar with /skill command support.
@@ -13,25 +12,25 @@ const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
  * When the user types "/skill", a dropdown appears listing available skills
  * from ~/.openmanus/skills/. Selecting one fills the input with "/skill <name>".
  */
-export function ChatInput({
+export const ChatInput = observer(function ChatInput({
     onSend,
     onStop,
     onNewChat,
     isLoading,
     showNewChat = false,
 }) {
+    const {skillStore} = useStore();
     const [value, setValue] = useState("");
     const taRef = useRef(null);
-    const [skills, setSkills] = useState([]);
-    const [showSkillPicker, setShowSkillPicker] = useState(false);
     const [skillIndex, setSkillIndex] = useState(0);
+
+    const skills = skillStore.skills;
+    const showSkillPicker = value.trim() === "/skill" || value.trim() === "/skill ";
 
     // load skills on mount
     useEffect(() => {
-        listSkills()
-            .then(setSkills)
-            .catch(() => {});
-    }, []);
+        skillStore.loadSkills();
+    }, [skillStore]);
 
     // auto-grow
     useEffect(() => {
@@ -41,28 +40,20 @@ export function ChatInput({
         ta.style.height = `${ta.scrollHeight}px`;
     }, [value]);
 
-    // detect /skill command in input
+    // picker 打开时重置高亮（showSkillPicker 由 value 派生）
     useEffect(() => {
-        const trimmed = value.trim();
-        if (trimmed === "/skill" || trimmed === "/skill ") {
-            setShowSkillPicker(true);
-            setSkillIndex(0);
-        } else {
-            setShowSkillPicker(false);
-        }
-    }, [value]);
+        if (showSkillPicker) setSkillIndex(0);
+    }, [showSkillPicker]);
 
     const submit = () => {
         const text = value.trim();
         if (!text || isLoading) return;
-        setShowSkillPicker(false);
         onSend(text);
         setValue("");
     };
 
     const selectSkill = (name) => {
         setValue(`/skill ${name} `);
-        setShowSkillPicker(false);
         taRef.current?.focus();
     };
 
@@ -82,11 +73,6 @@ export function ChatInput({
             if (e.key === "Enter" || e.key === "Tab") {
                 e.preventDefault();
                 selectSkill(skills[skillIndex].name);
-                return;
-            }
-            if (e.key === "Escape") {
-                e.preventDefault();
-                setShowSkillPicker(false);
                 return;
             }
         }
@@ -221,7 +207,7 @@ export function ChatInput({
             </div>
         </div>
     );
-}
+});
 
 function ToolBtn({ children, label, onClick }) {
     return (

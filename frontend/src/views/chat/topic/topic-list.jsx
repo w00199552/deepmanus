@@ -26,6 +26,7 @@ export const TopicList = observer(function TopicList({
     const { topics } = useStore();
     const [query, setQuery] = useState("");
     const [deleteTarget, setDeleteTarget] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const handleConfirmDelete = async () => {
         if (deleteTarget) {
@@ -35,7 +36,8 @@ export const TopicList = observer(function TopicList({
     };
 
     useEffect(() => {
-        topics.load();
+        setLoading(true);
+        topics.load().finally(() => setLoading(false));
     }, [topics]);
 
     // Collapsed mode: narrow strip showing only avatars
@@ -94,7 +96,7 @@ export const TopicList = observer(function TopicList({
 
             {/* list */}
             <div className="flex-1 overflow-y-auto px-1.5 pb-3">
-                {topics.loading && (
+                {loading && (
                     <p className="px-2.5 py-3 text-xs text-muted-foreground">
                         Loading…
                     </p>
@@ -105,7 +107,7 @@ export const TopicList = observer(function TopicList({
                     </p>
                 )}
 
-                {!topics.loading && (
+                {!loading && (
                     <>
                         {/* DEFAULT group — main topic */}
                         <Section

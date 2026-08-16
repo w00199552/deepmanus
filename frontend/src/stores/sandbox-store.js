@@ -1,27 +1,11 @@
-/**
- * SandboxStore — owns the Sandbox panel's entire state + operations.
- *
- * Single source of truth for:
- *   - workdir (the active topic's working directory)
- *   - cd command (API call + workdir update)
- *   - file CRUD (tree, read, write, lazy children)
- *
- * Injected into RootStore alongside AgentRuntime.  The runtime delegates
- * cd commands here; Playground reads workdir and calls file methods here.
- *
- * @module stores/SandboxStore
- */
-
 import {makeAutoObservable, runInAction} from "mobx";
 
-const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
+import sandboxService from "@/services/sandbox-service.js";
+import topicService from "@/services/topic-service.js";
 
 export class SandboxStore {
-    // ─── injected collaborators ──────────────────────────────────────────────
     _topicStore = null;
 
-    // ─── observable state ───────────────────────────────────────────────────
-    /** Current workdir (synced from the active topic on switch, updated by cd). */
     workdir = "";
 
     constructor() {
@@ -32,13 +16,6 @@ export class SandboxStore {
         this._topicStore = s;
     }
 
-    // ─── workdir sync ────────────────────────────────────────────────────────
-
-    /**
-     * Sync workdir from the active topic (called when the user switches topic).
-     * Reads `topic.workdir` from the TopicStore and copies it into our
-     * observable — no API call needed.
-     */
     syncFromTopic() {
         if (!this._topicStore) return;
         const topic = this._topicStore.active;
@@ -47,29 +24,10 @@ export class SandboxStore {
         }
     }
 
-    // ─── cd command ──────────────────────────────────────────────────────────
-
-    /**
-     * Execute a cd command: call the backend API, update workdir + active topic.
-     * Returns `{workdir, action}` so the caller can display a system message.
-     * Throws on error.
-     */
     async cd(topicId, path) {
-        const res = await fetch(
-            `${BACKEND}/topics/${encodeURIComponent(topicId)}/cd`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ path }),
-            }
-        );
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `cd failed: ${res.status}`);
-        }
-        const body = await res.json();
-
-        if (body.workdir && body.action === "cd") {
+        const resp = await topicService.cdTopic(topicId, path);
+        const body = resp.result;
+        if (body && body.workdir && body.action === "cd") {
             runInAction(() => {
                 this.workdir = body.workdir;
                 if (this._topicStore) {
@@ -78,109 +36,45 @@ export class SandboxStore {
                 }
             });
         }
-
-        return body; // {workdir, action}
+        return body;
     }
 
-    // ─── file operations ─────────────────────────────────────────────────────
-
-    /** GET /sandbox/tree — root + first-level children (collapsed dirs). */
     async loadTree() {
-        const wdParam = this.workdir
-            ? `?workdir=${encodeURIComponent(this.workdir)}`
-            : "";
-        const res = await fetch(`${BACKEND}/sandbox/tree${wdParam}`);
-        if (!res.ok) throw new Error(`tree failed: ${res.status}`);
-        return res.json();
+        const resp = await sandboxService.getTree(this.workdir || null);
+        return resp.result;
     }
 
-    /** GET /sandbox/children — immediate children of a dir (lazy expansion). */
     async loadChildren(dirPath) {
-        const wdParam = this.workdir
-            ? `&workdir=${encodeURIComponent(this.workdir)}`
-            : "";
-        const res = await fetch(
-            `${BACKEND}/sandbox/children?path=${encodeURIComponent(dirPath)}${wdParam}`
-        );
-        if (!res.ok) throw new Error(`children failed: ${res.status}`);
-        const data = await res.json();
-        return data.children;
+        const resp = await sandboxService.getChildren(dirPath, this.workdir || null);
+        return resp.result?.children || [];
     }
 
-    /** GET /sandbox/read — read a file's content. */
     async loadFile(path) {
-        const wdParam = this.workdir
-            ? `&workdir=${encodeURIComponent(this.workdir)}`
-            : "";
-        const res = await fetch(
-            `${BACKEND}/sandbox/read?path=${encodeURIComponent(path)}${wdParam}`
-        );
-        if (!res.ok) throw new Error(`read failed: ${res.status}`);
-        return res.json();
+        const resp = await sandboxService.readFile(path, this.workdir || null);
+        return resp.result;
     }
 
-    /** PUT /sandbox/write — save a file. */
     async saveFile(path, content) {
-        const res = await fetch(`${BACKEND}/sandbox/write`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                path,
-                content,
-                workdir: this.workdir || undefined,
-            }),
-        });
-        if (!res.ok) throw new Error(`write failed: ${res.status}`);
-        return res.json();
+        const resp = await sandboxService.writeFile(path, content, this.workdir || null);
+        return resp.result;
     }
 
-    /** DELETE /sandbox/delete — delete a file or directory. */
     async deletePath(path) {
-        const res = await fetch(`${BACKEND}/sandbox/delete`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ path, workdir: this.workdir || undefined }),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `delete failed: ${res.status}`);
-        }
-        return res.json();
+        const resp = await sandboxService.deletePath(path, this.workdir || null);
+        return resp.result;
     }
 
-    /** POST /sandbox/mkdir — create a directory. */
     async createDir(path) {
-        const res = await fetch(`${BACKEND}/sandbox/mkdir`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ path, workdir: this.workdir || undefined }),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `mkdir failed: ${res.status}`);
-        }
-        return res.json();
+        const resp = await sandboxService.createDir(path, this.workdir || null);
+        return resp.result;
     }
 
-    /** POST /sandbox/create — create an empty file. */
     async createFile(path) {
-        const res = await fetch(`${BACKEND}/sandbox/create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ path, workdir: this.workdir || undefined }),
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            throw new Error(err.detail || `create failed: ${res.status}`);
-        }
-        return res.json();
+        const resp = await sandboxService.createFile(path, this.workdir || null);
+        return resp.result;
     }
 
-    /** Build the watchdog SSE URL for the current workdir. */
     get watchUrl() {
-        const wdParam = this.workdir
-            ? `?workdir=${encodeURIComponent(this.workdir)}`
-            : "";
-        return `${BACKEND}/sandbox/watch${wdParam}`;
+        return sandboxService.getWatchUrl(this.workdir || null);
     }
 }

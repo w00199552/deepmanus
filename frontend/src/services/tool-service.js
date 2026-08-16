@@ -1,31 +1,21 @@
-/**
- * Tool service — list tools + browse tool files (tree + content).
- * Backed by backend `/tools-api` (see api/tools.py).
- */
+import axios from "@/services/axios.js";
 
-const BACKEND = (import.meta.env && import.meta.env.VITE_BACKEND_URL) || "";
+class ToolService {
+    service = import.meta.env.VITE_BACKEND_URL;
 
-/** List all tools (built-in + user-defined). */
-export async function listTools() {
-    const res = await fetch(`${BACKEND}/tools-api`);
-    if (!res.ok) throw new Error(`listTools: ${res.status}`);
-    return res.json();
+    async listTools() {
+        return await axios.get(`${this.service}/tools-api`);
+    }
+
+    async getToolTree(name) {
+        return await axios.get(`${this.service}/tools-api/${encodeURIComponent(name)}/tree`);
+    }
+
+    async getToolFile(name, path) {
+        return await axios.get(`${this.service}/tools-api/${encodeURIComponent(name)}/file`, {
+            params: {path}
+        });
+    }
 }
 
-/** Get the file tree of a user tool. 404 for built-in tools (no files). */
-export async function getToolTree(name) {
-    const res = await fetch(
-        `${BACKEND}/tools-api/${encodeURIComponent(name)}/tree`
-    );
-    if (!res.ok) throw new Error(`getToolTree: ${res.status}`);
-    return res.json();
-}
-
-/** Read a single file from a tool directory. */
-export async function getToolFile(name, path) {
-    const res = await fetch(
-        `${BACKEND}/tools-api/${encodeURIComponent(name)}/file?path=${encodeURIComponent(path)}`
-    );
-    if (!res.ok) throw new Error(`getToolFile: ${res.status}`);
-    return res.json();
-}
+export default new ToolService();

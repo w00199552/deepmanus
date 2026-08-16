@@ -1,6 +1,7 @@
 import {observer} from "mobx-react-lite";
 import {useState} from "react";
 import {AlertCircle, Bot, Check, ChevronLeft, FileText, Image, Save, Sparkles, Wrench,} from "lucide-react";
+import {toast} from "sonner";
 import MDEditor from "@uiw/react-md-editor";
 
 import {useStore} from "@/hooks/use-store.jsx";
@@ -23,8 +24,16 @@ const AgentDetail = observer(({name, onBack}) => {
     const colorMode = isDark ? "dark" : "light";
     const [tab, setTab] = useState("prompt");
     const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    if (s.loading || !s.current) return <LoadingState>Loading…</LoadingState>;
+    const handleSave = async () => {
+        setSaving(true);
+        const ok = await s.save();
+        if (ok) toast.success("Agent saved successfully");
+        setSaving(false);
+    };
+
+    if (!s.current) return <LoadingState>Loading…</LoadingState>;
 
     return (
         <div className="flex h-full">
@@ -89,12 +98,12 @@ const AgentDetail = observer(({name, onBack}) => {
 
                 <div className="mt-auto p-3">
                     <button
-                        onClick={() => s.save()}
-                        disabled={s.saving}
+                        onClick={handleSave}
+                        disabled={saving}
                         className="flex w-full items-center justify-center gap-1.5 rounded-full bg-accent/15 px-3 py-2 text-[13px] text-accent transition hover:bg-accent/25 disabled:opacity-50"
                     >
                         <Save className="size-3.5"/>
-                        {s.saving ? "Saving…" : "Save"}
+                        {saving ? "Saving…" : "Save"}
                     </button>
                 </div>
             </div>
@@ -112,11 +121,10 @@ const AgentDetail = observer(({name, onBack}) => {
                                 />
                                 <button
                                     onClick={() => setAvatarPickerOpen(true)}
-                                    disabled={s.avatarLoading}
-                                    className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-sidebar/30 px-3 py-2 text-[12px] text-muted-foreground transition hover:border-accent/40 hover:text-foreground disabled:opacity-50"
+                                    className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-sidebar/30 px-3 py-2 text-[12px] text-muted-foreground transition hover:border-accent/40 hover:text-foreground"
                                 >
-                                    <Image className={cn("size-3.5", s.avatarLoading && "animate-spin")}/>
-                                    {s.avatarLoading ? "更新中…" : "选择头像"}
+                                    <Image className="size-3.5"/>
+                                    选择头像
                                 </button>
                             </div>
                             <AvatarPickerDialog
