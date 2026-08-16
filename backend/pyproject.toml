@@ -18,6 +18,7 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "sse-starlette>=3.4.5",
     "watchdog>=6.0.0",
+    "loguru>=0.7.3",
 ]
 
 [build-system]
@@ -29,6 +30,8 @@ package = true
 
 [tool.uv.build-backend]
 module-name = "openmanus"
+# Flat layout: the package sits at backend/openmanus (no src/ layer).
+module-root = ""
 
 [dependency-groups]
 dev = [

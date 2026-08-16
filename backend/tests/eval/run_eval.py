@@ -1,24 +1,3 @@
-"""Coder behavior eval — main driver.
-
-Runs Coder (the real LLM) on a batch of fixture coding tasks, scores each on:
-  * Completion    — does the produced code work? (fixture's check.py decides)
-  * Constraints   — does Coder obey the prompt's style/process constraints?
-                    (this driver decides, uniformly across tasks)
-
-Writes a per-run Markdown report to tests/eval/reports/<timestamp>.md.
-
-USAGE
-    cd backend
-    uv run python tests/eval/run_eval.py            # all tasks
-    uv run python tests/eval/run_eval.py bfs        # one task
-    uv run python tests/eval/run_eval.py --list     # list available tasks
-
-COST / CAVEATS
-    Each task = one full LLM coding conversation (~5-15k tokens, 20-60s).
-    Results are non-deterministic — a single run is a sample, not a verdict.
-    Run the same task multiple times to average out variance.
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -33,8 +12,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-# Import the eval infrastructure (sets up isolated DB on import).
-from conftest_eval import (  # noqa: E402
+from conftest_eval import (
     _REPORTS_ROOT,
     AgentRunResult,
     list_tasks,
@@ -43,17 +21,11 @@ from conftest_eval import (  # noqa: E402
     run_coder,
 )
 
-
-# ─── Scoring config ─────────────────────────────────────────────────────────
-# Thresholds for the constraint checks. Tunable — these are starting values;
-# adjust after a few real runs show what Coder actually does.
-
-COMMENT_DENSITY_THRESHOLD = 0.30   # >30% comment lines → flagged
-DIFF_BLOWUP_FACTOR = 2.0           # diff lines > expected × this → flagged
-NEVER_COMMIT_PENALTY = 0.40        # score deduction for running `git commit`
-NO_LINT_PENALTY = 0.05             # mild deduction for not running lint
-REFORMAT_PENALTY = 0.15            # deduction for touching unrelated files
-
+COMMENT_DENSITY_THRESHOLD = 0.30
+DIFF_BLOWUP_FACTOR = 2.0
+NEVER_COMMIT_PENALTY = 0.40
+NO_LINT_PENALTY = 0.05
+REFORMAT_PENALTY = 0.15
 
 @dataclass
 class TaskResult:
@@ -67,12 +39,7 @@ class TaskResult:
     duration_s: float = 0.0
     workdir: str = ""
 
-
-# ─── Per-task runner ────────────────────────────────────────────────────────
-
-
 async def evaluate_task(task_name: str) -> TaskResult:
-    """Run Coder on one fixture, score completion + constraints."""
     result = TaskResult(task_name=task_name)
     prompt, check_fn = load_task(task_name)
 
@@ -92,7 +59,6 @@ async def evaluate_task(task_name: str) -> TaskResult:
         result.constraint_score = 0.0
         return result
 
-    # ── Completion: run the fixture's check.py in the workdir ──
     try:
         outcome = check_fn(Path(workdir))
         result.completion_score = float(outcome.get("score", 0.0))
@@ -100,27 +66,20 @@ async def evaluate_task(task_name: str) -> TaskResult:
     except AssertionError as e:
         result.completion_score = 0.0
         result.completion_reason = f"check failed: {e}"
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         result.completion_score = 0.0
         result.completion_reason = f"check crashed: {type(e).__name__}: {e}"
 
-    # ── Constraints: uniform checks across all tasks ──
     score_constraints(result, run, Path(workdir), task_name)
 
     return result
 
-
-# ─── Constraint scoring ─────────────────────────────────────────────────────
-
-
 def score_constraints(
     result: TaskResult, run: AgentRunResult, workdir: Path, task_name: str
 ) -> None:
-    """Apply the prompt-constraint checks. Mutates result in place."""
     notes: list[str] = []
     deductions: list[float] = []
 
-    # 1. NEVER commit — did Coder run `git commit` via execute?
     commit_run = any(
         t.name == "execute" and re.search(r"\bgit\s+commit\b", t.args)
         for t in run.tool_calls
@@ -131,7 +90,6 @@ def score_constraints(
     else:
         notes.append("didn't run `git commit` (respects NEVER commit)")
 
-    # 2. Comment density — sample the files Coder created/modified.
     comment_ratio = _comment_density(workdir, task_name)
     if comment_ratio is not None:
         if comment_ratio > COMMENT_DENSITY_THRESHOLD:
@@ -140,15 +98,11 @@ def score_constraints(
         else:
             notes.append(f"comment density {comment_ratio:.0%} (OK)")
 
-    # 3. Touched unrelated files — git diff --stat vs expected file set.
     unrelated = _unrelated_changes(workdir, task_name)
     if unrelated:
         notes.append(f"⚠️ touched unrelated files: {', '.join(unrelated)}")
         deductions.append(REFORMAT_PENALTY * len(unrelated))
 
-    # 4. Ran lint/typecheck?  — only checked when the project HAS a lint config.
-    # A bare fixture with no pyproject.toml/ruff.toml/.eslintrc has nothing to
-    # lint against; penalizing "didn't run lint" there is noise, not signal.
     has_lint_config = _has_lint_config(workdir)
     if has_lint_config:
         ran_lint = any(
@@ -166,18 +120,9 @@ def score_constraints(
     result.constraint_notes = notes
     result.constraint_score = max(0.0, 1.0 - sum(deductions))
 
-
 def _comment_density(workdir: Path, task_name: str) -> float | None:
-    """Ratio of comment lines to total lines across .py files Coder touched.
-
-    Returns None if there are no .py files to measure (e.g. non-Python task).
-    Only counts full-line comments (# ...) — not inline trailing comments,
-    which are harder to attribute to "did Coder add chatter".
-    """
     py_files = list(workdir.rglob("*.py"))
-    # Exclude any test file we shipped in the fixture (it's not Coder's output).
     py_files = [p for p in py_files if not p.name.startswith("test_") or p.name == "test_search.py"]
-    # For fix_bug, test_search.py is part of the fixture, skip it.
     py_files = [p for p in py_files if p.name != "test_search.py"]
     if not py_files:
         return None
@@ -195,22 +140,15 @@ def _comment_density(workdir: Path, task_name: str) -> float | None:
         return None
     return comments / total
 
-
 def _unrelated_changes(workdir: Path, task_name: str) -> list[str]:
-    """Names of files Coder changed that aren't part of the expected output.
-
-    Uses git diff against the fixture baseline. Returns [] if git unavailable
-    or if the task is from-scratch (no baseline to compare).
-    """
     expected: dict[str, set[str]] = {
-        # task_name → set of files the task legitimately may create/modify
         "bfs": {"bfs.py"},
         "add_param": {"calc.py"},
         "fix_bug": {"search.py"},
     }
     allowed = expected.get(task_name)
     if allowed is None:
-        return []  # unknown task — don't penalize
+        return []
     try:
         out = subprocess.run(
             ["git", "diff", "--name-only", "HEAD"],
@@ -218,22 +156,17 @@ def _unrelated_changes(workdir: Path, task_name: str) -> list[str]:
         )
         if out.returncode != 0:
             return []
-        # Also catch untracked files (newly created).
         out2 = subprocess.run(
             ["git", "ls-files", "--others", "--exclude-standard"],
             cwd=str(workdir), capture_output=True, text=True, timeout=5,
         )
         changed = set(out.stdout.split()) | set(out2.stdout.split())
-        # Coder writing its own tests is GOOD (matches "verify with tests" in
-        # the prompt) — never penalize test files as "unrelated".
         changed = {f for f in changed if not _is_test_file(f)}
         return sorted(changed - allowed)
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return []
 
-
 def _is_test_file(path: str) -> bool:
-    """True for conventional test-file names across languages."""
     import os
     name = os.path.basename(path).lower()
     return (
@@ -246,25 +179,16 @@ def _is_test_file(path: str) -> bool:
         or name.endswith(".spec.ts")
     )
 
-
-# Files whose presence means "this project has a real lint/typecheck setup",
-# so it's fair to expect Coder to run the linter.
 _LINT_CONFIG_FILES = {
-    "pyproject.toml", "ruff.toml", ".ruff.toml", "setup.cfg",  # Python
+    "pyproject.toml", "ruff.toml", ".ruff.toml", "setup.cfg",
     ".eslintrc", ".eslintrc.js", ".eslintrc.json", ".eslintrc.yml",
-    "eslint.config.js", "eslint.config.mjs",  # JS/TS
-    "tsconfig.json",  # TS typecheck
-    ".golangci.yml", ".golangci.yaml",  # Go
+    "eslint.config.js", "eslint.config.mjs",
+    "tsconfig.json",
+    ".golangci.yml", ".golangci.yaml",
 }
 
-
 def _has_lint_config(workdir: Path) -> bool:
-    """True if the workdir contains a known lint/typecheck config file."""
     return any((workdir / name).exists() for name in _LINT_CONFIG_FILES)
-
-
-# ─── Report ─────────────────────────────────────────────────────────────────
-
 
 def write_report(results: list[TaskResult], argv: list[str]) -> Path:
     _REPORTS_ROOT.mkdir(parents=True, exist_ok=True)
@@ -301,7 +225,6 @@ def write_report(results: list[TaskResult], argv: list[str]) -> Path:
         lines.append(f"- **Workdir** (kept for inspection): `{r.workdir}`")
         lines.append("")
 
-    # Summary
     if results:
         avg_c = sum(r.completion_score for r in results) / len(results)
         avg_k = sum(r.constraint_score for r in results) / len(results)
@@ -320,10 +243,6 @@ def write_report(results: list[TaskResult], argv: list[str]) -> Path:
 
     report.write_text("\n".join(lines), encoding="utf-8")
     return report
-
-
-# ─── CLI ────────────────────────────────────────────────────────────────────
-
 
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="Coder behavior eval.")
@@ -352,18 +271,16 @@ def main(argv: list[str]) -> int:
     print(report.read_text(encoding="utf-8"))
     return 0
 
-
 async def _run_all(tasks: list[str]) -> list[TaskResult]:
     results = []
     for t in tasks:
         try:
             r = await evaluate_task(t)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             r = TaskResult(task_name=t, agent_error=f"{type(e).__name__}: {e}")
         results.append(r)
         _print_inline(r)
     return results
-
 
 def _print_inline(r: TaskResult) -> None:
     status = "✅" if r.completion_score >= 1.0 else "❌"
@@ -373,7 +290,6 @@ def _print_inline(r: TaskResult) -> None:
         f"{len(r.tools_called)} tool calls)",
         flush=True,
     )
-
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

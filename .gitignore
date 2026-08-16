@@ -43,6 +43,12 @@ backend/out.txt
 tree_algorithms/
 *.b64
 
+# Embedded Python runtime — populated by backend/scripts/bootstrap_python.py
+# (~200MB CPython from python-build-standalone + download cache). Never commit.
+backend/openmanus/skills/python/
+backend/openmanus/skills/.downloads/
+backend/openmanus/skills/.staging_python/
+
 # Editor / OS
 .DS_Store
 .idea/

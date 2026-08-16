@@ -63,7 +63,7 @@ suite / typecheck step exists yet.
 
 ## Architecture boundaries
 
-- **Backend entry:** `backend/src/openmanus/main.py` (FastAPI app + lifespan). `api/` = HTTP
+- **Backend entry:** `backend/openmanus/main.py` (FastAPI app + lifespan). `api/` = HTTP
   routers (`sessions`, `streams`, `agents`, `files`, `skills`, `tools`). `engine.py` =
   `StreamEngine` (the execution heart). `agent_factory.py` = `build_agent`/`close_agent`.
   `channels.py` = in-process `asyncio.Queue` per session. `event_schema.py` = SSE frame schema.

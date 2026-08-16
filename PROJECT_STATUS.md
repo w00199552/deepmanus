@@ -36,10 +36,10 @@
 - 顺手修了 `agent_factory._build_tools` 里 `logger` 未定义的潜在 NameError(遇到未知工具名时会崩)。
 
 **改动文件:**
-- `backend/src/openmanus/agent_factory.py`(核心:`_BUILTIN_TOOLS` + `_resolve_tool_whitelist` + `build_agent` 白名单逻辑 + `logger` 定义)
-- `backend/src/openmanus/agent_loader.py`(`load_all`/`create` 删两个字段)
-- `backend/src/openmanus/api/agents.py`(`AgentSummary`/`AgentDetail` 删两个字段 + 序列化点)
-- `backend/src/openmanus/tools/mailbox_tools.py`(dispatch metadata 删 `allowed_tools`)
+- `backend/openmanus/agent_factory.py`(核心:`_BUILTIN_TOOLS` + `_resolve_tool_whitelist` + `build_agent` 白名单逻辑 + `logger` 定义)
+- `backend/openmanus/agent_loader.py`(`load_all`/`create` 删两个字段)
+- `backend/openmanus/api/agents.py`(`AgentSummary`/`AgentDetail` 删两个字段 + 序列化点)
+- `backend/openmanus/tools/mailbox_tools.py`(dispatch metadata 删 `allowed_tools`)
 - `backend/seed/agents/{Manus,Coder,Researcher,TeamLeader}/agent.yaml`(重写,统一用 `tools`)
 - `frontend/src/views/agents-view.jsx`(删 `strip_file_tools` 徽章 + `allowed_tools` 兜底文案)
 - `backend/tests/test_build_agent_tools.py`(新增,两层断言:纯函数 + 集成,全绿)
@@ -308,7 +308,7 @@ RootStore (stores/index.js)
 
 ---
 
-## 3. 后端实现现状（backend/src/openmanus/）
+## 3. 后端实现现状（backend/openmanus/）
 
 | 文件 | 职责 |
 |---|---|

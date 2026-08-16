@@ -1,7 +1,7 @@
 # OpenManus 架构文档(ARCHITECTURE)
 
 > 本文档面向新成员,系统性地介绍 **OpenManus** 项目的整体架构、技术栈、模块职责、数据流与设计决策。
-> 后端代码位于 [`backend/src/openmanus`](./backend/src/openmanus),是一个基于 **FastAPI + LangGraph + deepagents** 构建的智能体(Agent)服务,对外通过**自定义 SSE 事件协议**与前端交互。
+> 后端代码位于 [`backend/openmanus`](./backend/openmanus),是一个基于 **FastAPI + LangGraph + deepagents** 构建的智能体(Agent)服务,对外通过**自定义 SSE 事件协议**与前端交互。
 > 本文与代码同步,如发现偏差以代码为准。当前所处阶段见 [ROADMAP.md](./ROADMAP.md)。
 
 ---
@@ -104,7 +104,7 @@ D:/OpenManus/
 ├── README.md                           # 项目总说明
 ├── restart.bat                         # Windows 启动脚本(杀旧进程 + 起 backend/frontend/electron)
 ├── backend/                            # Python 后端
-│   ├── src/openmanus/
+│   ├── openmanus/
 │   │   ├── main.py                     # FastAPI app + lifespan(加载 agents/tools/skills + init_db + ensure_manus)
 │   │   ├── config.py                   # Settings(.env):provider/model/key/workdir/port=8999
 │   │   ├── db.py                       # sessions 表 CRUD + ensure_manus + 迁移
@@ -140,7 +140,7 @@ D:/OpenManus/
 
 | 目录 | 职责 |
 |---|---|
-| `backend/src/openmanus/` | 后端核心包(所有业务逻辑) |
+| `backend/openmanus/` | 后端核心包(所有业务逻辑) |
 | `backend/seed/` | 内置 agent/tool/skill 种子,首次运行复制到 `~/.openmanus/`(之后不覆盖) |
 | `backend/data/` | 运行时 SQLite DB(gitignore) |
 | `frontend/src/` | 前端源码(mobx 单向数据流) |
@@ -484,9 +484,9 @@ agent 实例**不缓存、不跨请求**。每次 `_stream` 时 `build_agent` �
 
 会话表用 `aiosqlite` 原生 SQL,无 SQLAlchemy。表少、查询简单,ORM 是过度设计。
 
-### 8.6 src-layout 包结构
+### 8.6 flat 包结构
 
-`backend/src/openmanus/` —— 标准 Python src-layout,`uv_build` 构建,`module-name = "openmanus"`。
+`backend/openmanus/` —— 平铺布局(无 src 层),`uv_build` 构建,`module-name = "openmanus"`、`module-root = ""`。
 
 ### 8.7 自定义 SSE 事件协议(非 AG-UI)
 
